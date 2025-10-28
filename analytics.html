@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics — BottleWifi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f0fdf4;
+            --card: #ffffff;
+            --accent: #059669;
+            --muted: #65a88a;
+            --gradient-start: #34d399;
+            --gradient-end: #059669;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 10px 10px, rgba(147, 197, 153, 0.1) 2px, transparent 0);
+            background-size: 24px 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: var(--card);
+            padding: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--accent);
+            text-decoration: none;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .back-button:hover {
+            background: rgba(5, 150, 105, 0.1);
+            transform: translateX(-2px);
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .analytics-card {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 800px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 4px solid rgba(5, 150, 105, 0.1);
+        }
+
+        .card-title {
+            color: var(--accent);
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(5, 150, 105, 0.05);
+            padding: 1.5rem;
+            border-radius: 16px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--muted);
+            font-size: 0.875rem;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(5, 150, 105, 0.1);
+            margin-bottom: 1.5rem;
+            height: 200px; /* Reduced height for even smaller graphs */
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .chart-title {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .chart-period {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .period-button {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(5, 150, 105, 0.2);
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+
+        .period-button.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .period-button:hover:not(.active) {
+            background: rgba(5, 150, 105, 0.05);
+        }
+
+        .dust-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .dust {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: rgba(250, 204, 21, 0.2);
+            border-radius: 50%;
+        }
+
+        @keyframes float-up {
+            0% {
+                transform: translateY(100%) translateX(0) scale(0);
+                opacity: 0;
+            }
+            50% {
+                opacity: 0.5;
+            }
+            100% {
+                transform: translateY(-100%) translateX(var(--tx)) scale(1);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .analytics-card {
+                padding: 1.5rem;
+                border-radius: 16px;
+                border-width: 2px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .stat-value {
+                font-size: 1.75rem;
+            }
+
+            .chart-container {
+                padding: 1rem;
+            }
+
+            .chart-period {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dust-container"></div>
+    <header class="header">
+        <a href="admin.php" class="back-button">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to Admin
+        </a>
+    </header>
+
+    <div class="container">
+        <div class="analytics-card">
+            <h1 class="card-title">Network Analytics</h1>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-bottles">0</div>
+                    <div class="stat-label">Total Bottles Recycled</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-minutes">0</div>
+                    <div class="stat-label">Total WiFi Minutes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="active-users">0</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avg-session">0</div>
+                    <div class="stat-label">Average Session Length</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-header">
+                    <div class="chart-title">Usage Trends</div>
+                    <div class="chart-period">
+                        <button class="period-button active">Day</button>
+                        <button class="period-button">Week</button>
+                        <button class="period-button">Month</button>
+                    </div>
+                </div>
+                <canvas id="usageChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-header">
+                    <div class="chart-title">Recycling Activity</div>
+                    <div class="chart-period">
+                        <button class="period-button active">Day</button>
+                        <button class="period-button">Week</button>
+                        <button class="period-button">Month</button>
+                    </div>
+                </div>
+                <canvas id="recyclingChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="dashboard.js"></script>
+    <script src="analytics.js"></script>
+</body>
+</html>

@@ -277,6 +277,16 @@ session_start();
                 <span>Start Recycling</span>
                 <span class="emoji">♻️</span>
             </button>
+
+            <div class="admin-link">
+                <a href="admin-login.php" class="admin-button">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Admin Settings
+                </a>
+            </div>
         </div>
 
         <div id="successMessage" class="success-message">
@@ -297,6 +307,57 @@ session_start();
             <div class="network-info">Network: Bottle_WiFi</div>
         </div>
     </div>
+
+    <style>
+        .admin-link {
+            text-align: center;
+            margin: 2rem 0;
+            transform: scale(1);
+            transition: transform 0.3s ease;
+        }
+        
+        .admin-link:hover {
+            transform: scale(1.05);
+        }
+        
+        .admin-button {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #059669;
+            text-decoration: none;
+            padding: 1rem 1.5rem;
+            border-radius: 9999px;
+            transition: all 0.2s;
+            background: white;
+            box-shadow: 0 2px 4px rgba(5, 150, 105, 0.1);
+            border: 2px solid rgba(5, 150, 105, 0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .admin-button:hover {
+            background: #f0fdf4;
+            border-color: #059669;
+            box-shadow: 0 4px 8px rgba(5, 150, 105, 0.15);
+        }
+        
+        .admin-button svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        @media (max-width: 640px) {
+            .admin-link {
+                margin: 1.5rem 0;
+            }
+            
+            .admin-button {
+                font-size: 0.9rem;
+                padding: 0.875rem 1.25rem;
+            }
+        }
+    </style>
 
     <script>
         function createDust() {
@@ -334,6 +395,20 @@ session_start();
             
             let timeLeft = 30;
             let countdownInterval;
+
+            // Admin button click handler
+            const adminButton = document.querySelector('.admin-button');
+            adminButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Clear any active intervals
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                }
+                
+                // Direct navigation to admin login
+                window.location.href = 'admin-login.php';
+            });
 
             startButton.addEventListener('click', function() {
                 startSection.style.display = 'none';

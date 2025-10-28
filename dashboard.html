@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — BottleWifi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f0fdf4;
+            --card: #ffffff;
+            --accent: #059669;
+            --muted: #65a88a;
+            --gradient-start: #34d399;
+            --gradient-end: #059669;
+            --danger: #dc2626;
+            --warning: #eab308;
+            --success: #22c55e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 10px 10px, rgba(147, 197, 153, 0.1) 2px, transparent 0);
+            background-size: 24px 24px;
+            color: #065f46;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            background: var(--card);
+            padding: 24px;
+            border-right: 1px solid rgba(5, 150, 105, 0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid rgba(5, 150, 105, 0.1);
+            margin-bottom: 24px;
+        }
+
+        .logo svg {
+            width: 32px;
+            height: 32px;
+            color: var(--accent);
+        }
+
+        .logo h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 8px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: var(--muted);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: rgba(5, 150, 105, 0.1);
+            color: var(--accent);
+        }
+
+        .nav-link svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 24px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .welcome {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(5, 150, 105, 0.1);
+        }
+
+        .stat-title {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .stat-footer {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            font-size: 13px;
+        }
+
+        /* Device List */
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--accent);
+        }
+
+        .device-list {
+            background: var(--card);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(5, 150, 105, 0.1);
+            overflow: hidden;
+        }
+
+        .device-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .device-table th {
+            text-align: left;
+            padding: 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--muted);
+            background: rgba(5, 150, 105, 0.05);
+            border-bottom: 1px solid rgba(5, 150, 105, 0.1);
+        }
+
+        .device-table td {
+            padding: 16px;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(5, 150, 105, 0.1);
+        }
+
+        .device-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .device-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success);
+        }
+
+        .status-inactive {
+            background: rgba(234, 179, 8, 0.1);
+            color: var(--warning);
+        }
+
+        .status-blocked {
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--danger);
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-block {
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--danger);
+        }
+
+        .btn-block:hover {
+            background: rgba(220, 38, 38, 0.2);
+        }
+
+        .btn-unblock {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success);
+        }
+
+        .btn-unblock:hover {
+            background: rgba(34, 197, 94, 0.2);
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .device-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+
+        .dust-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .dust {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: rgba(250, 204, 21, 0.2);
+            border-radius: 50%;
+        }
+
+        @keyframes float-up {
+            0% {
+                transform: translateY(100%) translateX(0) scale(0);
+                opacity: 0;
+            }
+            50% {
+                opacity: 0.5;
+            }
+            100% {
+                transform: translateY(-100%) translateX(var(--tx)) scale(1);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dust-container"></div>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.14 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                </svg>
+                <h1>BottleWifi</h1>
+            </div>
+
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="dashboard.html" class="nav-link active">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="settings.html" class="nav-link">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                            </svg>
+                            Settings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="analytics.html" class="nav-link">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                            Analytics
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="history.html" class="nav-link">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            History
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="login.html" class="nav-link">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                            Logout
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <h2 class="welcome">Welcome, Admin</h2>
+                <div class="date" id="current-date"></div>
+            </header>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-title">Active Users</div>
+                    <div class="stat-value">24</div>
+                    <div class="stat-footer" style="color: var(--success)">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                        <span>↑ 12% from last hour</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-title">Bandwidth Usage</div>
+                    <div class="stat-value">1.2 GB</div>
+                    <div class="stat-footer" style="color: var(--warning)">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                        </svg>
+                        <span>↓ 3% from average</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-title">Network Speed</div>
+                    <div class="stat-value">54 Mbps</div>
+                    <div class="stat-footer" style="color: var(--success)">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                        <span>Optimal</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-title">Blocked Devices</div>
+                    <div class="stat-value">3</div>
+                    <div class="stat-footer" style="color: var(--danger)">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>Review Required</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Connected Devices -->
+            <section>
+                <h3 class="section-title">Connected Devices</h3>
+                <div class="device-list">
+                    <table class="device-table">
+                        <thead>
+                            <tr>
+                                <th>Device Name</th>
+                                <th>IP Address</th>
+                                <th>MAC Address</th>
+                                <th>Status</th>
+                                <th>Data Usage</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>John's iPhone</td>
+                                <td>192.168.1.101</td>
+                                <td>00:1B:44:11:3A:B7</td>
+                                <td><span class="device-status status-active">Active</span></td>
+                                <td>234 MB</td>
+                                <td><button class="action-btn btn-block">Block</button></td>
+                            </tr>
+                            <tr>
+                                <td>Sarah's Laptop</td>
+                                <td>192.168.1.102</td>
+                                <td>00:1B:44:11:3A:B8</td>
+                                <td><span class="device-status status-inactive">Inactive</span></td>
+                                <td>1.2 GB</td>
+                                <td><button class="action-btn btn-block">Block</button></td>
+                            </tr>
+                            <tr>
+                                <td>Unknown Device</td>
+                                <td>192.168.1.103</td>
+                                <td>00:1B:44:11:3A:B9</td>
+                                <td><span class="device-status status-blocked">Blocked</span></td>
+                                <td>45 MB</td>
+                                <td><button class="action-btn btn-unblock">Unblock</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Initialize dust animation
+        function createDust() {
+            const container = document.querySelector('.dust-container');
+            for (let i = 0; i < 30; i++) {
+                const dust = document.createElement('div');
+                dust.className = 'dust';
+                const size = Math.random() * 3 + 1;
+                const startX = Math.random() * 100;
+                const tx = (Math.random() - 0.5) * 50;
+                const duration = Math.random() * 3 + 2;
+                const delay = Math.random() * 2;
+                
+                dust.style.cssText = `
+                    left: ${startX}%;
+                    width: ${size}px;
+                    height: ${size}px;
+                    --tx: ${tx}px;
+                    animation: float-up ${duration}s ease-in infinite ${delay}s;
+                `;
+                
+                container.appendChild(dust);
+            }
+        }
+
+        // Update current date
+        function updateDate() {
+            const dateElement = document.getElementById('current-date');
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            dateElement.textContent = new Date().toLocaleDateString('en-US', options);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            createDust();
+            updateDate();
+            setInterval(updateDate, 60000); // Update time every minute
+        });
+    </script>
+</body>
+</html>
