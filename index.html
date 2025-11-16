@@ -10,241 +10,39 @@ session_start();
     <title>Bottle WiFi</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #f0fdf4;
-            background-image: radial-gradient(circle at 10px 10px, rgba(147, 197, 153, 0.1) 2px, transparent 0);
-            background-size: 24px 24px;
-        }
-
-        .container {
-            background: white;
-            padding: 2rem;
-            border-radius: 24px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 28rem;
-            margin: 1rem;
-            border: 4px solid rgba(5, 150, 105, 0.1);
-            position: relative;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .emoji-row {
-            display: flex;
-            justify-content: center;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .emoji {
-            font-size: 1.5rem;
-        }
-
-        .title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #065f46;
-            margin-bottom: 0.5rem;
-        }
-
-        .subtitle {
-            color: #059669;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-        }
-
-        .info-pill {
-            display: inline-block;
-            background-color: #f0fdf4;
-            border-radius: 9999px;
-            padding: 0.5rem 1rem;
-            color: #059669;
-            font-size: 0.875rem;
-        }
-
-        .timer-section {
-            text-align: center;
-            margin-bottom: 2rem;
-            display: none;
-        }
-
-        .timer-display {
-            font-size: 3rem;
-            font-weight: 600;
-            color: #059669;
-            margin-bottom: 1rem;
-        }
-
-        .progress-bar-container {
-            width: 100%;
-            background-color: #f0fdf4;
-            border-radius: 9999px;
-            padding: 2px;
-            margin-top: 1rem;
-        }
-
-        .progress-bar {
-            height: 6px;
-            border-radius: 9999px;
-            background: linear-gradient(90deg, #34d399, #059669);
-            box-shadow: 0 0 10px rgba(52, 211, 153, 0.3);
-            transition: width 1s linear;
-        }
-
-        .start-button {
-            width: 100%;
-            background: linear-gradient(to right, #34d399, #059669);
-            color: white;
-            border: none;
-            padding: 1rem 1.5rem;
-            border-radius: 9999px;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .start-button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
-        }
-
-        .success-message {
-            display: none;
-            margin-top: 1rem;
-            padding: 1.5rem;
-            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-            border: 1px solid #86efac;
-            border-radius: 12px;
-            text-align: center;
-        }
-
-        .status-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-top: 1.5rem;
-        }
-
-        .status-card {
-            background: white;
-            padding: 0.75rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .status-label {
-            font-size: 0.75rem;
-            color: #059669;
-            font-weight: 500;
-        }
-
-        .status-value {
-            color: #059669;
-        }
-
-        .network-info {
-            margin-top: 1rem;
-            font-size: 0.75rem;
-            color: #059669;
-            text-align: center;
-        }
-
-        .dust-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            overflow: hidden;
-            pointer-events: none;
-        }
-
-        .dust {
-            position: absolute;
-            width: 3px;
-            height: 3px;
-            background: rgba(250, 204, 21, 0.2);
-            border-radius: 50%;
-        }
-
-        @keyframes float-up {
-            0% {
-                transform: translateY(100%) translateX(0) scale(0);
-                opacity: 0;
-            }
-            50% {
-                opacity: 0.5;
-            }
-            100% {
-                transform: translateY(-100%) translateX(var(--tx)) scale(1);
-                opacity: 0;
-            }
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
-        }
-
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 640px) {
-            .container {
-                padding: 1.5rem;
-                margin: 0.75rem;
-                border-radius: 16px;
-            }
-
-            .title {
-                font-size: 1.25rem;
-            }
-
-            .emoji {
-                font-size: 1.25rem;
-            }
-
-            .timer-display {
-                font-size: 2.5rem;
-            }
-
-            .start-button {
-                padding: 0.875rem 1.25rem;
-                font-size: 0.9375rem;
-            }
-
-            .status-grid {
-                gap: 0.75rem;
-            }
-
-            .status-card {
-                padding: 0.625rem;
-            }
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #f0fdf4; background-image: radial-gradient(circle at 10px 10px, rgba(147, 197, 153, 0.1) 2px, transparent 0); background-size: 24px 24px; }
+        .container { background: white; padding: 2rem; border-radius: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 28rem; margin: 1rem; border: 4px solid rgba(5,150,105,0.1); position: relative; }
+        .header { text-align: center; margin-bottom: 2rem; }
+        .emoji-row { display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1rem; }
+        .emoji { font-size: 1.5rem; }
+        .title { font-size: 1.5rem; font-weight: 600; color: #065f46; margin-bottom: 0.5rem; }
+        .subtitle { color: #059669; margin-bottom: 0.5rem; font-size: 0.9rem; }
+        .info-pill { display: inline-block; background-color: #f0fdf4; border-radius: 9999px; padding: 0.5rem 1rem; color: #059669; font-size: 0.875rem; }
+        .timer-section { text-align: center; margin-bottom: 2rem; display: none; }
+        .timer-display { font-size: 3rem; font-weight: 600; color: #059669; margin-bottom: 1rem; }
+        .progress-bar-container { width: 100%; background-color: #f0fdf4; border-radius: 9999px; padding: 2px; margin-top: 1rem; }
+        .progress-bar { height: 6px; border-radius: 9999px; background: linear-gradient(90deg, #34d399, #059669); box-shadow: 0 0 10px rgba(52,211,153,0.3); transition: width 1s linear; }
+        .start-button { width: 100%; background: linear-gradient(to right, #34d399, #059669); color: white; border: none; padding: 1rem 1.5rem; border-radius: 9999px; font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .start-button:hover { transform: translateY(-1px); box-shadow: 0 6px 8px rgba(0,0,0,0.15); }
+        .success-message { display: none; margin-top: 1rem; padding: 1.5rem; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1px solid #86efac; border-radius: 12px; text-align: center; }
+        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; }
+        .status-card { background: white; padding: 0.75rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .status-label { font-size: 0.75rem; color: #059669; font-weight: 500; }
+        .status-value { color: #059669; }
+        .network-info { margin-top: 1rem; font-size: 0.75rem; color: #059669; text-align: center; }
+        .dust-container { position: absolute; top:0; left:0; right:0; bottom:0; overflow:hidden; pointer-events:none; }
+        .dust { position: absolute; width:3px; height:3px; background: rgba(250,204,21,0.2); border-radius:50%; }
+        @keyframes float-up { 0%{transform:translateY(100%) translateX(0) scale(0);opacity:0;} 50%{opacity:0.5;} 100%{transform:translateY(-100%) translateX(var(--tx)) scale(1);opacity:0;} }
+        @keyframes pulse {0%{transform:scale(1);}50%{transform:scale(1.02);}100%{transform:scale(1);}}
+        .pulse { animation: pulse 2s infinite; }
+        @media (max-width:640px){.container{padding:1.5rem;margin:0.75rem;border-radius:16px;}.title{font-size:1.25rem;}.emoji{font-size:1.25rem;}.timer-display{font-size:2.5rem;}.start-button{padding:0.875rem 1.25rem;font-size:0.9375rem;}.status-grid{gap:0.75rem;}.status-card{padding:0.625rem;} }
+        .admin-link{text-align:center;margin:2rem 0;transform:scale(1);transition:transform 0.3s ease;}
+        .admin-link:hover{transform:scale(1.05);}
+        .admin-button{font-size:1rem;font-weight:500;color:#059669;text-decoration:none;padding:1rem 1.5rem;border-radius:9999px;transition:all 0.2s;background:white;box-shadow:0 2px 4px rgba(5,150,105,0.1);border:2px solid rgba(5,150,105,0.2);display:inline-flex;align-items:center;gap:0.5rem;}
+        .admin-button:hover{background:#f0fdf4;border-color:#059669;box-shadow:0 4px 8px rgba(5,150,105,0.15);}
+        .admin-button svg{width:20px;height:20px;}
+        @media (max-width:640px){.admin-link{margin:1.5rem 0;}.admin-button{font-size:0.9rem;padding:0.875rem 1.25rem;}}
     </style>
 </head>
 <body>
@@ -308,57 +106,6 @@ session_start();
         </div>
     </div>
 
-    <style>
-        .admin-link {
-            text-align: center;
-            margin: 2rem 0;
-            transform: scale(1);
-            transition: transform 0.3s ease;
-        }
-        
-        .admin-link:hover {
-            transform: scale(1.05);
-        }
-        
-        .admin-button {
-            font-size: 1rem;
-            font-weight: 500;
-            color: #059669;
-            text-decoration: none;
-            padding: 1rem 1.5rem;
-            border-radius: 9999px;
-            transition: all 0.2s;
-            background: white;
-            box-shadow: 0 2px 4px rgba(5, 150, 105, 0.1);
-            border: 2px solid rgba(5, 150, 105, 0.2);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .admin-button:hover {
-            background: #f0fdf4;
-            border-color: #059669;
-            box-shadow: 0 4px 8px rgba(5, 150, 105, 0.15);
-        }
-        
-        .admin-button svg {
-            width: 20px;
-            height: 20px;
-        }
-
-        @media (max-width: 640px) {
-            .admin-link {
-                margin: 1.5rem 0;
-            }
-            
-            .admin-button {
-                font-size: 0.9rem;
-                padding: 0.875rem 1.25rem;
-            }
-        }
-    </style>
-
     <script>
         function createDust() {
             const container = document.querySelector('.dust-container');
@@ -396,17 +143,10 @@ session_start();
             let timeLeft = 30;
             let countdownInterval;
 
-            // Admin button click handler
             const adminButton = document.querySelector('.admin-button');
             adminButton.addEventListener('click', function(e) {
                 e.preventDefault();
-                
-                // Clear any active intervals
-                if (countdownInterval) {
-                    clearInterval(countdownInterval);
-                }
-                
-                // Direct navigation to admin login
+                if (countdownInterval) { clearInterval(countdownInterval); }
                 window.location.href = 'admin-login.php';
             });
 
@@ -414,29 +154,46 @@ session_start();
                 startSection.style.display = 'none';
                 timerSection.style.display = 'block';
                 
-                countdownInterval = setInterval(function() {
-                    timeLeft--;
-                    timer.textContent = timeLeft;
-                    progressBar.style.width = (timeLeft / 30 * 100) + '%';
-                    
-                    if (timeLeft <= 0) {
+                let checkIR = setInterval(async function() {
+                    const r = await fetch("ir.php");
+                    const data = await r.json();
+
+                    if (data.detected) {
+                        clearInterval(checkIR);
                         clearInterval(countdownInterval);
                         timerSection.style.display = 'none';
                         successMessage.style.display = 'block';
                         startWiFiTimer();
                     }
                 }, 1000);
+
+                countdownInterval = setInterval(function() {
+                    timeLeft--;
+                    timer.textContent = timeLeft;
+                    progressBar.style.width = (timeLeft / 30 * 100) + '%';
+
+                    if (timeLeft <= 0) {
+                        clearInterval(countdownInterval);
+                        clearInterval(checkIR);
+                        timerSection.style.display = 'none';
+                        alert("No bottle detected! Please insert a bottle to proceed."); 
+                        timeLeft = 30;
+                        timer.textContent = timeLeft;
+                        progressBar.style.width = '100%';
+                        startSection.style.display = 'block';
+                    }
+                }, 1000);
             });
 
             function startWiFiTimer() {
-                let wifiTimeLeft = 5 * 60; // 5 minutes in seconds
+                let wifiTimeLeft = 5 * 60;
                 const timeRemaining = document.getElementById('timeRemaining');
                 
                 const wifiInterval = setInterval(function() {
                     wifiTimeLeft--;
                     const minutes = Math.floor(wifiTimeLeft / 60);
                     const seconds = wifiTimeLeft % 60;
-                    timeRemaining.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    timeRemaining.textContent = `${minutes}:${seconds.toString().padStart(2,'0')}`;
                     
                     if (wifiTimeLeft <= 0) {
                         clearInterval(wifiInterval);
