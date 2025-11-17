@@ -1,337 +1,112 @@
 <?php
-// Initialize session for potential admin check
+// Initialize session or any PHP logic you need
 session_start();
-require_once 'settings_handler.php';
-
-// Function to format time remaining
-function formatTimeRemaining($seconds) {
-    if ($seconds < 60) {
-        return $seconds . " seconds";
-    } elseif ($seconds < 3600) {
-        return floor($seconds / 60) . " minutes";
-    } else {
-        return floor($seconds / 3600) . " hours " . floor(($seconds % 3600) / 60) . " minutes";
-    }
-}
-
-// Get WiFi settings
-$settings = getSettings();
-$sessionDuration = $settings['wifi_time'];
-
-// Check if there's an active session
-$isConnected = isset($_SESSION['wifi_connected']) && $_SESSION['wifi_connected'] === true;
-$timeRemaining = isset($_SESSION['connect_time']) ? 
-    ($_SESSION['connect_time'] + $sessionDuration) - time() : 
-    $sessionDuration;
-
-// Handle connection request
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accept_terms'])) {
-    $_SESSION['wifi_connected'] = true;
-    $_SESSION['connect_time'] = time();
-    $_SESSION['device_mac'] = $_SERVER['REMOTE_ADDR']; // In production, get actual MAC address
-    $isConnected = true;
-    $timeRemaining = 3600; // 1 hour in seconds
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to BottleWifi</title>
+    <title>Bottle WiFi</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg: #f0fdf4;
-            --card: #ffffff;
-            --accent: #059669;
-            --muted: #65a88a;
-            --gradient-start: #34d399;
-            --gradient-end: #059669;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
-        }
-
-        body {
-            min-height: 100vh;
-            background-color: var(--bg);
-            background-image: radial-gradient(circle at 10px 10px, rgba(147, 197, 153, 0.1) 2px, transparent 0);
-            background-size: 24px 24px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .header {
-            background: var(--card);
-            padding: 1rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-        .logo svg {
-            width: 32px;
-            height: 32px;
-        }
-
-        .logo span {
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-
-        .admin-link {
-            padding: 0.5rem 1rem;
-            color: var(--muted);
-            text-decoration: none;
-            border-radius: 6px;
-            transition: all 0.2s;
-        }
-
-        .admin-link:hover {
-            background: rgba(5, 150, 105, 0.1);
-            color: var(--accent);
-        }
-
-        .main-content {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-        }
-
-        .card {
-            background: var(--card);
-            border-radius: 24px;
-            padding: 2rem;
-            width: 100%;
-            max-width: 480px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border: 4px solid rgba(5, 150, 105, 0.1);
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .welcome-title {
-            color: var(--accent);
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .status-message {
-            color: var(--muted);
-            margin-bottom: 2rem;
-        }
-
-        .terms {
-            text-align: left;
-            margin-bottom: 2rem;
-            padding: 1rem;
-            background: rgba(5, 150, 105, 0.05);
-            border-radius: 12px;
-            font-size: 0.875rem;
-            color: var(--muted);
-        }
-
-        .connect-btn {
-            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
-            color: white;
-            border: 0;
-            padding: 0.75rem 2rem;
-            border-radius: 9999px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .connect-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .timer {
-            font-size: 2rem;
-            font-weight: 600;
-            color: var(--accent);
-            margin: 1rem 0;
-        }
-
-        .dust-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            overflow: hidden;
-            pointer-events: none;
-        }
-
-        .dust {
-            position: absolute;
-            width: 3px;
-            height: 3px;
-            background: rgba(250, 204, 21, 0.2);
-            border-radius: 50%;
-        }
-
-        @keyframes float-up {
-            0% {
-                transform: translateY(100%) translateX(0) scale(0);
-                opacity: 0;
-            }
-            50% {
-                opacity: 0.5;
-            }
-            100% {
-                transform: translateY(-100%) translateX(var(--tx)) scale(1);
-                opacity: 0;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .header {
-                padding: 0.75rem;
-            }
-
-            .logo span {
-                display: none;
-            }
-
-            .card {
-                margin: 1rem;
-                padding: 1.25rem;
-                border-radius: 16px;
-                border-width: 2px;
-            }
-
-            .welcome-title {
-                font-size: 1.25rem;
-            }
-
-            .terms {
-                padding: 0.75rem;
-                font-size: 0.813rem;
-            }
-
-            .timer {
-                font-size: 1.5rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .header {
-                padding: 0.5rem;
-            }
-
-            .logo svg {
-                width: 24px;
-                height: 24px;
-            }
-
-            .admin-link {
-                padding: 0.375rem 0.75rem;
-                font-size: 0.875rem;
-            }
-
-            .main-content {
-                padding: 1rem;
-            }
-
-            .card {
-                margin: 0;
-                padding: 1rem;
-                border-radius: 12px;
-            }
-
-            .welcome-title {
-                font-size: 1.125rem;
-            }
-
-            .status-message {
-                font-size: 0.875rem;
-            }
-
-            .connect-btn {
-                width: 100%;
-                padding: 0.625rem 1rem;
-            }
-        }
-
-        @media (min-width: 769px) {
-            .card {
-                transform: translateY(0);
-                transition: transform 0.2s, box-shadow 0.2s;
-            }
-
-            .card:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-            }
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #f0fdf4; background-image: radial-gradient(circle at 10px 10px, rgba(147, 197, 153, 0.1) 2px, transparent 0); background-size: 24px 24px; }
+        .container { background: white; padding: 2rem; border-radius: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 28rem; margin: 1rem; border: 4px solid rgba(5,150,105,0.1); position: relative; }
+        .header { text-align: center; margin-bottom: 2rem; }
+        .emoji-row { display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1rem; }
+        .emoji { font-size: 1.5rem; }
+        .title { font-size: 1.5rem; font-weight: 600; color: #065f46; margin-bottom: 0.5rem; }
+        .subtitle { color: #059669; margin-bottom: 0.5rem; font-size: 0.9rem; }
+        .info-pill { display: inline-block; background-color: #f0fdf4; border-radius: 9999px; padding: 0.5rem 1rem; color: #059669; font-size: 0.875rem; }
+        .timer-section { text-align: center; margin-bottom: 2rem; display: none; }
+        .timer-display { font-size: 3rem; font-weight: 600; color: #059669; margin-bottom: 1rem; }
+        .progress-bar-container { width: 100%; background-color: #f0fdf4; border-radius: 9999px; padding: 2px; margin-top: 1rem; }
+        .progress-bar { height: 6px; border-radius: 9999px; background: linear-gradient(90deg, #34d399, #059669); box-shadow: 0 0 10px rgba(52,211,153,0.3); transition: width 1s linear; }
+        .start-button { width: 100%; background: linear-gradient(to right, #34d399, #059669); color: white; border: none; padding: 1rem 1.5rem; border-radius: 9999px; font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .start-button:hover { transform: translateY(-1px); box-shadow: 0 6px 8px rgba(0,0,0,0.15); }
+        .success-message { display: none; margin-top: 1rem; padding: 1.5rem; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1px solid #86efac; border-radius: 12px; text-align: center; }
+        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; }
+        .status-card { background: white; padding: 0.75rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .status-label { font-size: 0.75rem; color: #059669; font-weight: 500; }
+        .status-value { color: #059669; }
+        .network-info { margin-top: 1rem; font-size: 0.75rem; color: #059669; text-align: center; }
+        .dust-container { position: absolute; top:0; left:0; right:0; bottom:0; overflow:hidden; pointer-events:none; }
+        .dust { position: absolute; width:3px; height:3px; background: rgba(250,204,21,0.2); border-radius:50%; }
+        @keyframes float-up { 0%{transform:translateY(100%) translateX(0) scale(0);opacity:0;} 50%{opacity:0.5;} 100%{transform:translateY(-100%) translateX(var(--tx)) scale(1);opacity:0;} }
+        @keyframes pulse {0%{transform:scale(1);}50%{transform:scale(1.02);}100%{transform:scale(1);} }
+        .pulse { animation: pulse 2s infinite; }
+        @media (max-width:640px){.container{padding:1.5rem;margin:0.75rem;border-radius:16px;}.title{font-size:1.25rem;}.emoji{font-size:1.25rem;}.timer-display{font-size:2.5rem;}.start-button{padding:0.875rem 1.25rem;font-size:0.9375rem;}.status-grid{gap:0.75rem;}.status-card{padding:0.625rem;} }
+        .admin-link{text-align:center;margin:2rem 0;transform:scale(1);transition:transform 0.3s ease;}
+        .admin-link:hover{transform:scale(1.05);}
+        .admin-button{font-size:1rem;font-weight:500;color:#059669;text-decoration:none;padding:1rem 1.5rem;border-radius:9999px;transition:all 0.2s;background:white;box-shadow:0 2px 4px rgba(5,150,105,0.1);border:2px solid rgba(5,150,105,0.2);display:inline-flex;align-items:center;gap:0.5rem;}
+        .admin-button:hover{background:#f0fdf4;border-color:#059669;box-shadow:0 4px 8px rgba(5,150,105,0.15);}
+        .admin-button svg{width:20px;height:20px;}
+        @media (max-width:640px){.admin-link{margin:1.5rem 0;}.admin-button{font-size:0.9rem;padding:0.875rem 1.25rem;}}
     </style>
 </head>
 <body>
-    <header class="header">
-        <a href="index.php" class="logo">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                    d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.14 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-            </svg>
-            <span>BottleWifi</span>
-        </a>
-        <a href="login.html" class="admin-link">Admin Login</a>
-    </header>
-
-    <main class="main-content">
-        <div class="card">
-            <div class="dust-container"></div>
-            <?php if (!$isConnected): ?>
-            <h1 class="welcome-title">Welcome to BottleWifi</h1>
-            <p class="status-message">Connect to our free WiFi service</p>
-            
-            <div class="terms">
-                <p><strong>Terms of Service:</strong></p>
-                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
-                    <li>1 hour of free internet access</li>
-                    <li>Fair usage policy applies</li>
-                    <li>No illegal activities allowed</li>
-                    <li>Speed may vary based on usage</li>
-                </ul>
+    <div class="container">
+        <div class="dust-container"></div>
+        
+        <div class="header">
+            <div class="emoji-row">
+                <span class="emoji">🌿</span>
+                <span class="emoji">♻️</span>
+                <span class="emoji">🌱</span>
             </div>
-
-            <form method="POST" action="">
-                <label style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 1.5rem;">
-                    <input type="checkbox" name="accept_terms" required>
-                    <span style="color: var(--muted); font-size: 0.875rem;">I accept the terms of service</span>
-                </label>
-                <button type="submit" class="connect-btn">Connect to WiFi</button>
-            </form>
-            <?php else: ?>
-            <h1 class="welcome-title">Connected to BottleWifi</h1>
-            <p class="status-message">Time Remaining:</p>
-            <div class="timer" id="countdown"><?php echo formatTimeRemaining($timeRemaining); ?></div>
-            <p style="color: var(--muted); font-size: 0.875rem;">You can now browse the internet</p>
-            <?php endif; ?>
+            <h1 class="title">Bottle WiFi</h1>
+            <p class="subtitle">Insert a bottle to connect</p>
+            <div class="info-pill">
+                <span>1 Bottle = 5 minutes</span>
+            </div>
         </div>
-    </main>
+
+        <div id="timerSection" class="timer-section">
+            <div class="timer-display" id="timer">30</div>
+            <p class="subtitle">Please insert your bottle</p>
+            <div class="progress-bar-container">
+                <div id="progressBar" class="progress-bar" style="width: 100%"></div>
+            </div>
+        </div>
+
+        <div id="startSection">
+            <button id="startButton" class="start-button pulse">
+                <span>Start Recycling</span>
+                <span class="emoji">♻️</span>
+            </button>
+
+            <div class="admin-link">
+                <a href="admin-login.php" class="admin-button">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Admin Settings
+                </a>
+            </div>
+        </div>
+
+        <div id="successMessage" class="success-message">
+            <div class="title">Connected! 🌿</div>
+            <p class="subtitle">Thank you for recycling. Your 5 minutes of WiFi access starts now.</p>
+            
+            <div class="status-grid">
+                <div class="status-card">
+                    <div class="status-label">Status</div>
+                    <div class="status-value">Active</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label">Time Left</div>
+                    <div class="status-value" id="timeRemaining">5:00</div>
+                </div>
+            </div>
+            
+            <div class="network-info">Network: Bottle_WiFi</div>
+        </div>
+    </div>
 
     <script>
-        // Dust animation
         function createDust() {
             const container = document.querySelector('.dust-container');
             for (let i = 0; i < 30; i++) {
@@ -355,43 +130,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accept_terms'])) {
             }
         }
 
-        // Initialize dust animation
-        document.addEventListener('DOMContentLoaded', createDust);
+        document.addEventListener('DOMContentLoaded', function() {
+            createDust();
 
-        // Countdown timer
-        <?php if ($isConnected): ?>
-        function updateTimer() {
-            let timeLeft = <?php echo $timeRemaining; ?>;
-            const timerElement = document.getElementById('countdown');
+            const startButton = document.getElementById('startButton');
+            const timerSection = document.getElementById('timerSection');
+            const startSection = document.getElementById('startSection');
+            const timer = document.getElementById('timer');
+            const progressBar = document.getElementById('progressBar');
+            const successMessage = document.getElementById('successMessage');
             
-            const timer = setInterval(() => {
-                timeLeft--;
+            let timeLeft = 30;
+            let countdownInterval;
+
+            const adminButton = document.querySelector('.admin-button');
+            adminButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (countdownInterval) { clearInterval(countdownInterval); }
+                window.location.href = 'admin-login.php';
+            });
+
+            startButton.addEventListener('click', function() {
+                startSection.style.display = 'none';
+                timerSection.style.display = 'block';
                 
-                if (timeLeft <= 0) {
-                    clearInterval(timer);
-                    window.location.href = 'index.php?expired=1';
-                    return;
-                }
+                let checkIR = setInterval(async function() {
+                    const r = await fetch("ir.php");
+                    const data = await r.json();
 
-                let hours = Math.floor(timeLeft / 3600);
-                let minutes = Math.floor((timeLeft % 3600) / 60);
-                let seconds = timeLeft % 60;
+                    if (data.detected) {
+                        clearInterval(checkIR);
+                        clearInterval(countdownInterval);
+                        timerSection.style.display = 'none';
+                        successMessage.style.display = 'block';
+                        startWiFiTimer();
+                    }
+                }, 1000);
 
-                let display = '';
-                if (hours > 0) {
-                    display += hours + ' hours ';
-                }
-                if (minutes > 0 || hours > 0) {
-                    display += minutes + ' minutes ';
-                }
-                display += seconds + ' seconds';
+                countdownInterval = setInterval(function() {
+                    timeLeft--;
+                    timer.textContent = timeLeft;
+                    progressBar.style.width = (timeLeft / 30 * 100) + '%';
 
-                timerElement.textContent = display;
-            }, 1000);
-        }
+                    if (timeLeft <= 0) {
+                        clearInterval(countdownInterval);
+                        clearInterval(checkIR);
+                        timerSection.style.display = 'none';
+                        alert("No bottle detected! Please insert a bottle to proceed."); 
+                        timeLeft = 30;
+                        timer.textContent = timeLeft;
+                        progressBar.style.width = '100%';
+                        startSection.style.display = 'block';
+                    }
+                }, 1000);
+            });
 
-        updateTimer();
-        <?php endif; ?>
+            function startWiFiTimer() {
+                let wifiTimeLeft = 5 * 60;
+                const timeRemaining = document.getElementById('timeRemaining');
+                
+                const wifiInterval = setInterval(function() {
+                    wifiTimeLeft--;
+                    const minutes = Math.floor(wifiTimeLeft / 60);
+                    const seconds = wifiTimeLeft % 60;
+                    timeRemaining.textContent = `${minutes}:${seconds.toString().padStart(2,'0')}`;
+                    
+                    if (wifiTimeLeft <= 0) {
+                        clearInterval(wifiInterval);
+                        successMessage.querySelector('.subtitle').textContent = 'Your session has ended. Please insert another bottle for more time.';
+                        successMessage.querySelector('.status-value').textContent = 'Disconnected';
+                    }
+                }, 1000);
+            }
+        });
     </script>
 </body>
 </html>
