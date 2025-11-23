@@ -14,21 +14,23 @@ def grant_wifi_access(mac_address, duration_minutes=5):
     """
     Grant WiFi access to a device for specified duration
     Uses iptables rules to control access
+    If mac_address is 'all', grants to all connected devices
     """
     try:
-        # Example: Add firewall rule to allow access
-        # This depends on your WiFi setup (hostapd, dnsmasq, etc.)
+        if mac_address == 'all':
+            # Grant access to all traffic (accept all in FORWARD chain)
+            cmd = "sudo iptables -I FORWARD -j ACCEPT"
+        else:
+            # Grant access to specific MAC address
+            cmd = f"sudo iptables -A FORWARD -m mac --mac-source {mac_address} -j ACCEPT"
         
-        # For a basic setup, you might use:
-        # iptables -A FORWARD -m mac --mac-source <MAC> -j ACCEPT
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         
-        cmd = f"sudo iptables -A FORWARD -m mac --mac-source {mac_address} -j ACCEPT"
-        subprocess.run(cmd, shell=True, check=True)
-        
-        # Schedule revocation after duration
-        revoke_cmd = f"sudo iptables -D FORWARD -m mac --mac-source {mac_address} -j ACCEPT"
-        subprocess.run(f"echo '{revoke_cmd}' | at now + {duration_minutes} minutes", 
-                      shell=True, check=False)
+        if result.returncode != 0:
+            return {
+                'success': False,
+                'error': result.stderr or 'iptables command failed'
+            }
         
         return {
             'success': True,

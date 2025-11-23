@@ -11,13 +11,15 @@ $scriptsDir = __DIR__;
 // ============================================
 if (isset($_GET['action']) && $_GET['action'] === 'wifi') {
     $subaction = isset($_GET['subaction']) ? $_GET['subaction'] : 'grant';
-    $mac = isset($_GET['mac']) ? $_GET['mac'] : '';
     $duration = isset($_GET['duration']) ? $_GET['duration'] : 5;
     
     if ($subaction === 'list') {
         $cmd = "sudo python3 {$scriptsDir}/wifi_control.py list 2>&1";
+    } else if ($subaction === 'grant') {
+        // Grant access to all connected devices (no MAC needed)
+        $cmd = "sudo python3 {$scriptsDir}/wifi_control.py grant all {$duration} 2>&1";
     } else {
-        $cmd = "sudo python3 {$scriptsDir}/wifi_control.py {$subaction} {$mac} {$duration} 2>&1";
+        $cmd = "sudo python3 {$scriptsDir}/wifi_control.py {$subaction} all 2>&1";
     }
     
     $output = shell_exec($cmd);
@@ -25,7 +27,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'wifi') {
     if ($output) {
         $data = json_decode($output, true);
         if ($data === null) {
-            echo json_encode(['error' => 'Invalid response', 'raw_output' => $output]);
+            echo json_encode(['error' => 'Invalid response', 'raw_output' => substr($output, 0, 500)]);
         } else {
             echo json_encode($data);
         }
