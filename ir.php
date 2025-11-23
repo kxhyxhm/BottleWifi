@@ -145,4 +145,5 @@ echo json_encode([
         'script_path' => $pythonScript,
         'script_exists' => true
     ]
+]);
 ?>
