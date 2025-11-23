@@ -48,10 +48,10 @@ if (!$pythonCheck || strpos($pythonCheck, 'not found') !== false) {
 $debug['python_version'] = trim($pythonCheck);
 
 // ============================================
-// Step 3: Execute Python script
+// Step 3: Execute Python script as root
 // ============================================
-// Run script and capture both stdout and stderr
-$output = shell_exec("python3 $pythonScript 2>&1");
+// Run script with sudo to allow GPIO access
+$output = shell_exec("sudo python3 $pythonScript 2>&1");
 
 if (!$output) {
     $error = "No output from Python script - check GPIO permissions and sensor wiring";
