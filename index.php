@@ -152,6 +152,7 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                 timerSection.style.display = 'block';
 
                 // IR CHECK LOOP
+                // The IR sensor's built-in red LED will blink when bottle is near
                 let checkIR = setInterval(async function () {
                     const res = await fetch("ir.php");
                     const data = await res.json();
