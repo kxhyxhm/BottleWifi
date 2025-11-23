@@ -258,6 +258,17 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                 let timeLeft = 5 * 60;
                 const display = document.getElementById('timeRemaining');
 
+                // Get device MAC address and grant WiFi access
+                fetch('hardware_control.php?action=wifi&subaction=grant&duration=5')
+                    .then(res => res.json())
+                    .then(data => {
+                        console.log('WiFi granted:', data);
+                        if (data.error) {
+                            console.error('WiFi grant failed:', data.error);
+                        }
+                    })
+                    .catch(err => console.error('WiFi control error:', err));
+
                 // Log the bottle detection
                 fetch('log_bottle.php', {
                     method: 'POST',
