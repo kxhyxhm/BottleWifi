@@ -132,6 +132,38 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
             }
         }
 
+        function showError(errorMsg, errorType, debug) {
+            const errorDiv = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            const errorDebug = document.getElementById('errorDebug');
+            
+            const errorDescriptions = {
+                FILE_NOT_FOUND: "Sensor script not found. Check installation.",
+                PYTHON_NOT_FOUND: "Python3 is not installed or not in PATH.",
+                NO_OUTPUT: "Sensor did not respond. Check GPIO wiring and permissions.",
+                INVALID_JSON: "Sensor returned invalid data.",
+                PYTHON_ERROR: "Sensor script encountered an error.",
+                MISSING_FIELD: "Sensor response missing expected data.",
+                TIMEOUT: "No bottle detected within timeout period."
+            };
+            
+            errorText.textContent = errorDescriptions[errorType] || errorMsg;
+            
+            if (debug) {
+                let debugText = `Type: ${errorType}`;
+                if (debug.possible_causes) {
+                    debugText += `\nPossible: ${debug.possible_causes.join(', ')}`;
+                }
+                if (debug.python_version) {
+                    debugText += `\nPython: ${debug.python_version}`;
+                }
+                errorDebug.textContent = debugText;
+            }
+            
+            errorDiv.style.display = 'block';
+            document.getElementById('startSection').style.display = 'block';
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             createDust();
 
@@ -190,8 +222,16 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
 
                     if (timeLeft <= 0) {
                         clearInterval(countdownInterval);
-                        alert("No bottle detected! Please insert a bottle.");
-                        window.location.reload();
+                        clearInterval(checkIR);
+                        timerSection.style.display = 'none';
+                        showError("No bottle detected within 30 seconds", "TIMEOUT", {
+                            'possible_causes': [
+                                'Bottle not positioned in front of sensor',
+                                'Sensor may not be wired correctly',
+                                'GPIO pin permissions not configured',
+                                'Check the sensor\'s red LED is blinking'
+                            ]
+                        });
                     }
                 }, 1000);
             });
@@ -219,37 +259,6 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                             'Session ended. Insert another bottle.';
                     }
                 }, 1000);
-            }
-
-            function showError(errorMsg, errorType, debug) {
-                const errorDiv = document.getElementById('errorMessage');
-                const errorText = document.getElementById('errorText');
-                const errorDebug = document.getElementById('errorDebug');
-                
-                const errorDescriptions = {
-                    FILE_NOT_FOUND: "Sensor script not found. Check installation.",
-                    PYTHON_NOT_FOUND: "Python3 is not installed or not in PATH.",
-                    NO_OUTPUT: "Sensor did not respond. Check GPIO wiring and permissions.",
-                    INVALID_JSON: "Sensor returned invalid data.",
-                    PYTHON_ERROR: "Sensor script encountered an error.",
-                    MISSING_FIELD: "Sensor response missing expected data."
-                };
-                
-                errorText.textContent = errorDescriptions[errorType] || errorMsg;
-                
-                if (debug) {
-                    let debugText = `Type: ${errorType}`;
-                    if (debug.possible_causes) {
-                        debugText += `\nPossible: ${debug.possible_causes.join(', ')}`;
-                    }
-                    if (debug.python_version) {
-                        debugText += `\nPython: ${debug.python_version}`;
-                    }
-                    errorDebug.textContent = debugText;
-                }
-                
-                errorDiv.style.display = 'block';
-                startSection.style.display = 'block';
             }
         });
     </script>
