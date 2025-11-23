@@ -80,8 +80,10 @@ $sensorData = json_decode($output, true);
 if ($sensorData === null) {
     $error = "Invalid JSON response from Python script";
     $debug['error_type'] = 'INVALID_JSON';
-    $debug['raw_output'] = substr($output, 0, 500);
+    $debug['raw_output'] = $output;  // Show full output for debugging
     $debug['json_error'] = json_last_error_msg();
+    $debug['output_length'] = strlen($output);
+    $debug['first_char'] = strlen($output) > 0 ? ord($output[0]) : null;
     
     echo json_encode([
         'detected' => false,
