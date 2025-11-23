@@ -47,9 +47,9 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
         
         <div class="header">
             <div class="emoji-row">
-                <span class="emoji">ðŸŒ¿</span>
-                <span class="emoji">â™»ï¸</span>
-                <span class="emoji">ðŸŒ±</span>
+                <span class="emoji">🌿</span>
+                <span class="emoji">♻️</span>
+                <span class="emoji">🌱</span>
             </div>
             <h1 class="title">Bottle WiFi</h1>
             <p class="subtitle">Insert a bottle to connect</p>
@@ -69,7 +69,7 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
         <div id="startSection">
             <button id="startButton" class="start-button pulse">
                 <span>Start Recycling</span>
-                <span class="emoji">â™»ï¸</span>
+                <span class="emoji">♻️</span>
             </button>
 
             <div class="admin-link">
@@ -84,7 +84,7 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
         </div>
 
         <div id="successMessage" class="success-message">
-            <div class="title">Connected! ðŸŒ¿</div>
+            <div class="title">Connected! 🌿</div>
             <p class="subtitle">Thank you for recycling. Your 5 minutes of WiFi access starts now.</p>
             
             <div class="status-grid">
@@ -102,7 +102,7 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
         </div>
 
         <div id="errorMessage" class="error-message" style="display: none; background: #fee; border: 1px solid #fcc; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
-            <div style="color: #c33; font-weight: 600; margin-bottom: 0.5rem;">âš ï¸ Error</div>
+            <div style="color: #c33; font-weight: 600; margin-bottom: 0.5rem;">⚠️ Error</div>
             <div id="errorText" style="color: #c33; font-size: 0.9rem;"></div>
             <div id="errorDebug" style="color: #999; font-size: 0.8rem; margin-top: 0.5rem; font-family: monospace;"></div>
         </div>
@@ -150,14 +150,25 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
             errorText.textContent = errorDescriptions[errorType] || errorMsg;
             
             if (debug) {
-                let debugText = `Type: ${errorType}`;
-                if (debug.possible_causes) {
+                let debugText = `Type: ${errorType || 'unknown'}`;
+                
+                // Show raw output if available
+                if (debug.raw_output) {
+                    debugText += `\nRaw Output: ${debug.raw_output}`;
+                }
+                
+                if (debug.possible_causes && Array.isArray(debug.possible_causes)) {
                     debugText += `\nPossible: ${debug.possible_causes.join(', ')}`;
                 }
                 if (debug.python_version) {
                     debugText += `\nPython: ${debug.python_version}`;
                 }
+                if (debug.json_error) {
+                    debugText += `\nJSON Error: ${debug.json_error}`;
+                }
+                
                 errorDebug.textContent = debugText;
+                console.log('Full debug object:', debug);
             }
             
             errorDiv.style.display = 'block';
