@@ -48,9 +48,9 @@ if (!$pythonCheck || strpos($pythonCheck, 'not found') !== false) {
 $debug['python_version'] = trim($pythonCheck);
 
 // ============================================
-// Step 3: Execute Python script as root
+// Step 3: Execute Python script
 // ============================================
-// Run script with sudo to allow GPIO access
+// Run script and capture both stdout and stderr
 $output = shell_exec("sudo python3 $pythonScript 2>&1");
 
 if (!$output) {
@@ -142,10 +142,12 @@ echo json_encode([
     'detected' => $detected,
     'timestamp' => date('Y-m-d H:i:s'),
     'status' => $detected ? 'bottle_detected' : 'waiting',
+    'raw_pin_value' => $sensorData['pin_state'] ?? null,
     'debug' => [
         'python_version' => $debug['python_version'],
         'script_path' => $pythonScript,
-        'script_exists' => true
+        'script_exists' => true,
+        'sensor_response' => $sensorData
     ]
 ]);
 ?>
