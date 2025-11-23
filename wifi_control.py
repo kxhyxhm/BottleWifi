@@ -18,8 +18,8 @@ def grant_wifi_access(mac_address, duration_minutes=5):
     """
     try:
         if mac_address == 'all':
-            # Grant access to all traffic (accept all in FORWARD chain)
-            cmd = "sudo iptables -I FORWARD -j ACCEPT"
+            # Create a temporary allow rule (will be removed after duration)
+            cmd = "sudo iptables -I FORWARD 1 -j ACCEPT"
         else:
             # Grant access to specific MAC address
             cmd = f"sudo iptables -A FORWARD -m mac --mac-source {mac_address} -j ACCEPT"
@@ -32,11 +32,24 @@ def grant_wifi_access(mac_address, duration_minutes=5):
                 'error': result.stderr or 'iptables command failed'
             }
         
+        # Schedule automatic revocation after duration
+        if mac_address == 'all':
+            revoke_cmd = "sudo iptables -D FORWARD 1"
+        else:
+            revoke_cmd = f"sudo iptables -D FORWARD -m mac --mac-source {mac_address} -j ACCEPT"
+        
+        # Use 'at' scheduler if available, otherwise log for manual removal
+        at_result = subprocess.run(
+            f"echo '{revoke_cmd}' | sudo at now + {duration_minutes} minutes",
+            shell=True, capture_output=True, text=True
+        )
+        
         return {
             'success': True,
             'message': f'WiFi access granted for {duration_minutes} minutes',
             'mac': mac_address,
-            'expires_at': (datetime.now() + timedelta(minutes=duration_minutes)).isoformat()
+            'expires_at': (datetime.now() + timedelta(minutes=duration_minutes)).isoformat(),
+            'revoke_scheduled': at_result.returncode == 0
         }
     except Exception as e:
         return {
