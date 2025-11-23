@@ -100,6 +100,12 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
             
             <div class="network-info">Network: Bottle_WiFi</div>
         </div>
+
+        <div id="errorMessage" class="error-message" style="display: none; background: #fee; border: 1px solid #fcc; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+            <div style="color: #c33; font-weight: 600; margin-bottom: 0.5rem;">⚠️ Error</div>
+            <div id="errorText" style="color: #c33; font-size: 0.9rem;"></div>
+            <div id="errorDebug" style="color: #999; font-size: 0.8rem; margin-top: 0.5rem; font-family: monospace;"></div>
+        </div>
     </div>
 
     <script>
@@ -157,6 +163,14 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                     const res = await fetch("ir.php");
                     const data = await res.json();
 
+                    if (data.error) {
+                        clearInterval(checkIR);
+                        clearInterval(countdownInterval);
+                        timerSection.style.display = 'none';
+                        showError(data.error, data.error_type, data.debug);
+                        return;
+                    }
+
                     if (data.detected) {
                         clearInterval(checkIR);
                         clearInterval(countdownInterval);
@@ -205,6 +219,37 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                             'Session ended. Insert another bottle.';
                     }
                 }, 1000);
+            }
+
+            function showError(errorMsg, errorType, debug) {
+                const errorDiv = document.getElementById('errorMessage');
+                const errorText = document.getElementById('errorText');
+                const errorDebug = document.getElementById('errorDebug');
+                
+                const errorDescriptions = {
+                    FILE_NOT_FOUND: "Sensor script not found. Check installation.",
+                    PYTHON_NOT_FOUND: "Python3 is not installed or not in PATH.",
+                    NO_OUTPUT: "Sensor did not respond. Check GPIO wiring and permissions.",
+                    INVALID_JSON: "Sensor returned invalid data.",
+                    PYTHON_ERROR: "Sensor script encountered an error.",
+                    MISSING_FIELD: "Sensor response missing expected data."
+                };
+                
+                errorText.textContent = errorDescriptions[errorType] || errorMsg;
+                
+                if (debug) {
+                    let debugText = `Type: ${errorType}`;
+                    if (debug.possible_causes) {
+                        debugText += `\nPossible: ${debug.possible_causes.join(', ')}`;
+                    }
+                    if (debug.python_version) {
+                        debugText += `\nPython: ${debug.python_version}`;
+                    }
+                    errorDebug.textContent = debugText;
+                }
+                
+                errorDiv.style.display = 'block';
+                startSection.style.display = 'block';
             }
         });
     </script>
