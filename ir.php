@@ -1,87 +1,148 @@
 <?php
-// IR Sensor Detection Endpoint
-// Returns JSON with detection status
+// IR Sensor Detection Endpoint with Error Logging
+// Returns JSON with detection status and error details for debugging
 
 header('Content-Type: application/json');
 
-// TODO: Replace this with your actual sensor integration
-// Depending on your setup, this could be:
-// 1. Shell command to read GPIO (Raspberry Pi)
-// 2. Serial port read (Arduino)
-// 3. File read from sensor output
-// 4. API call to another service
-
 $detected = false;
+$error = null;
+$debug = [];
 
 // ============================================
-// Test multiple GPIO pins to find the sensor
+// Step 1: Check if Python script exists
 // ============================================
-// Try common GPIO pins (2, 3, 4, 17, 27, etc.)
-$pinsToTest = [2, 3, 4, 17, 22, 27];
+$pythonScript = __DIR__ . '/read_ir_sensor.py';
 
-foreach ($pinsToTest as $pin) {
-    $output = shell_exec("gpio read $pin 2>/dev/null");
-    if (trim($output) == '1') {
-        $detected = true;
-        // Log which pin triggered detection for debugging
-        error_log("IR detected on GPIO pin: $pin");
-        break;
-    }
+if (!file_exists($pythonScript)) {
+    $error = "Python script not found at: {$pythonScript}";
+    $debug['error_type'] = 'FILE_NOT_FOUND';
+    $debug['expected_path'] = $pythonScript;
+    
+    echo json_encode([
+        'detected' => false,
+        'error' => $error,
+        'debug' => $debug,
+        'timestamp' => date('Y-m-d H:i:s')
+    ]);
+    exit();
 }
 
 // ============================================
-// EXAMPLE 2: Read from a sensor file
+// Step 2: Check if Python3 is installed
 // ============================================
-// Disabled - using GPIO instead
-/*
-$sensorFile = '/tmp/ir_sensor_status.txt';
-if (file_exists($sensorFile)) {
-    $content = trim(file_get_contents($sensorFile));
-    $detected = ($content === 'detected' || $content === '1');
+$pythonCheck = shell_exec("python3 --version 2>&1");
+if (!$pythonCheck || strpos($pythonCheck, 'not found') !== false) {
+    $error = "Python3 is not installed or not in PATH";
+    $debug['error_type'] = 'PYTHON_NOT_FOUND';
+    $debug['python_check_output'] = $pythonCheck ?: 'empty';
+    
+    echo json_encode([
+        'detected' => false,
+        'error' => $error,
+        'debug' => $debug,
+        'timestamp' => date('Y-m-d H:i:s')
+    ]);
+    exit();
 }
-*/
+
+$debug['python_version'] = trim($pythonCheck);
 
 // ============================================
-// EXAMPLE 3: Serial port (Arduino via USB)
+// Step 3: Execute Python script
 // ============================================
-// Disabled - using GPIO instead
-/*
-$portPath = '/dev/ttyUSB0'; // or 'COM3' on Windows
-if (function_exists('fopen')) {
-    $port = fopen($portPath, 'r');
-    if ($port) {
-        $data = fread($port, 10);
-        fclose($port);
-        $detected = (strpos($data, 'detected') !== false || strpos($data, '1') !== false);
-    }
+// Run script and capture both stdout and stderr
+$output = shell_exec("python3 $pythonScript 2>&1");
+
+if (!$output) {
+    $error = "No output from Python script - check GPIO permissions and sensor wiring";
+    $debug['error_type'] = 'NO_OUTPUT';
+    $debug['possible_causes'] = [
+        'GPIO permissions not configured',
+        'Sensor not wired correctly',
+        'Python script has runtime error',
+        'GPIO library not installed'
+    ];
+    
+    echo json_encode([
+        'detected' => false,
+        'error' => $error,
+        'debug' => $debug,
+        'timestamp' => date('Y-m-d H:i:s')
+    ]);
+    exit();
 }
-*/
 
 // ============================================
-// EXAMPLE 4: Execute a Python script
+// Step 4: Validate JSON response
 // ============================================
-// Disabled - using GPIO instead
-/*
-$output = shell_exec("python3 /path/to/read_sensor.py 2>/dev/null");
-$detected = (trim($output) === 'true' || trim($output) === '1');
-*/
+$sensorData = json_decode($output, true);
 
-// ============================================
-// EXAMPLE 5: Check a local API endpoint
-// ============================================
-// Disabled - using GPIO instead
-/*
-$response = @file_get_contents('http://localhost:8888/sensor');
-if ($response) {
-    $data = json_decode($response, true);
-    $detected = isset($data['detected']) && $data['detected'] === true;
+if ($sensorData === null) {
+    $error = "Invalid JSON response from Python script";
+    $debug['error_type'] = 'INVALID_JSON';
+    $debug['raw_output'] = substr($output, 0, 500);
+    $debug['json_error'] = json_last_error_msg();
+    
+    echo json_encode([
+        'detected' => false,
+        'error' => $error,
+        'debug' => $debug,
+        'timestamp' => date('Y-m-d H:i:s')
+    ]);
+    exit();
 }
-*/
 
-// Return JSON response
+// ============================================
+// Step 5: Check for Python errors
+// ============================================
+if (isset($sensorData['error'])) {
+    $error = $sensorData['error'];
+    $debug['error_type'] = 'PYTHON_ERROR';
+    $debug['python_error'] = $error;
+    
+    echo json_encode([
+        'detected' => false,
+        'error' => "Sensor error: {$error}",
+        'debug' => $debug,
+        'timestamp' => date('Y-m-d H:i:s')
+    ]);
+    exit();
+}
+
+// ============================================
+// Step 6: Extract detection status
+// ============================================
+if (!isset($sensorData['detected'])) {
+    $error = "Missing 'detected' field in sensor response";
+    $debug['error_type'] = 'MISSING_FIELD';
+    $debug['response_keys'] = array_keys($sensorData);
+    
+    echo json_encode([
+        'detected' => false,
+        'error' => $error,
+        'debug' => $debug,
+        'timestamp' => date('Y-m-d H:i:s')
+    ]);
+    exit();
+}
+
+$detected = $sensorData['detected'];
+
+// Log successful detections
+if ($detected) {
+    error_log("[BOTTLE_DETECTED] " . date('Y-m-d H:i:s'));
+}
+
+// ============================================
+// Return successful response
+// ============================================
 echo json_encode([
     'detected' => $detected,
     'timestamp' => date('Y-m-d H:i:s'),
-    'status' => $detected ? 'bottle_detected' : 'waiting'
-]);
+    'status' => $detected ? 'bottle_detected' : 'waiting',
+    'debug' => [
+        'python_version' => $debug['python_version'],
+        'script_path' => $pythonScript,
+        'script_exists' => true
+    ]
 ?>
