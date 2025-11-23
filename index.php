@@ -175,6 +175,18 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
             document.getElementById('startSection').style.display = 'block';
         }
 
+        // Get device MAC address via ARP or fallback to IP
+        async function getDeviceMAC() {
+            try {
+                const response = await fetch('get_device_mac.php');
+                const data = await response.json();
+                return data.mac || null;
+            } catch (e) {
+                console.error('Failed to get MAC:', e);
+                return null;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             createDust();
 
