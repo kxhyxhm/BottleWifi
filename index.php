@@ -192,25 +192,32 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                 // IR CHECK LOOP
                 // The IR sensor's built-in red LED will blink when bottle is near
                 let checkIR = setInterval(async function () {
-                    const res = await fetch("ir.php");
-                    const data = await res.json();
-
-                    if (data.error) {
-                        clearInterval(checkIR);
-                        clearInterval(countdownInterval);
-                        timerSection.style.display = 'none';
-                        showError(data.error, data.error_type, data.debug);
-                        return;
-                    }
-
-                    if (data.detected) {
-                        clearInterval(checkIR);
-                        clearInterval(countdownInterval);
+                    try {
+                        const res = await fetch("ir.php");
+                        const data = await res.json();
                         
-                        timerSection.style.display = 'none';
-                        successMessage.style.display = 'block';
-                        
-                        startWiFiTimer();
+                        console.log('IR Response:', data);
+
+                        if (data.error) {
+                            clearInterval(checkIR);
+                            clearInterval(countdownInterval);
+                            timerSection.style.display = 'none';
+                            console.log('Showing error:', data.error_type);
+                            showError(data.error, data.error_type, data.debug);
+                            return;
+                        }
+
+                        if (data.detected) {
+                            clearInterval(checkIR);
+                            clearInterval(countdownInterval);
+                            
+                            timerSection.style.display = 'none';
+                            successMessage.style.display = 'block';
+                            
+                            startWiFiTimer();
+                        }
+                    } catch (e) {
+                        console.error('Fetch error:', e);
                     }
                 }, 500);
 
