@@ -1,10 +1,18 @@
 <?php
-// Hardware Control API
-// Provides interface between PHP and Python hardware scripts
+/**
+ * UPDATED Hardware Control API
+ * Now enforces per-device internet access control
+ * 
+ * KEY CHANGE: Checks if device has active bottle-donated session
+ * before granting WiFi access via iptables rules
+ */
+
+require_once 'session_manager.php';
 
 header('Content-Type: application/json');
 
 $scriptsDir = __DIR__;
+$sessionManager = new SessionManager();
 
 // SECURITY: Verify firewall is properly configured on every request
 function verifyFirewallConfig() {
@@ -31,7 +39,7 @@ function verifyFirewallConfig() {
 }
 
 // ============================================
-// WiFi Control
+// WiFi Control - UPDATED WITH SESSION CHECKS
 // ============================================
 if (isset($_GET['action']) && $_GET['action'] === 'wifi') {
     // SECURITY CHECK: Verify firewall before processing any WiFi requests
@@ -50,152 +58,87 @@ if (isset($_GET['action']) && $_GET['action'] === 'wifi') {
     $subaction = isset($_GET['subaction']) ? $_GET['subaction'] : 'grant';
     $duration = isset($_GET['duration']) ? $_GET['duration'] : 5;
     
-    // SECURITY: Verify bottle detection token for grant requests
+    // ============================================
+    // GRANT WiFi - WITH BOTTLE VALIDATION
+    // ============================================
     if ($subaction === 'grant') {
         $verificationToken = isset($_GET['token']) ? $_GET['token'] : '';
-        
-        // Check if this is a valid bottle detection token
-        $tokenFile = __DIR__ . '/bottle_tokens.json';
-        $validToken = false;
-        
-        if (file_exists($tokenFile)) {
-            $tokens = json_decode(file_get_contents($tokenFile), true) ?: [];
-            $currentTime = time();
-            
-            // Check if token exists and is not expired (tokens valid for 10 seconds)
-            if (isset($tokens[$verificationToken])) {
-                $tokenData = $tokens[$verificationToken];
-                if ($tokenData['expires_at'] > $currentTime && !$tokenData['used']) {
-                    $validToken = true;
-                    // Mark token as used
-                    $tokens[$verificationToken]['used'] = true;
-                    file_put_contents($tokenFile, json_encode($tokens, JSON_PRETTY_PRINT));
-                }
-            }
-        }
-        
-        if (!$validToken) {
-            echo json_encode([
-                'error' => 'BOTTLE_DETECTION_REQUIRED',
-                'message' => 'You must drop a bottle first to get WiFi access',
-                'details' => 'No valid bottle detection token provided. This prevents unauthorized access.',
-                'severity' => 'SECURITY_VIOLATION'
-            ]);
-            exit();
-        }
-    }
-    
-    if ($subaction === 'list') {
-        $cmd = "sudo python3 {$scriptsDir}/wifi_control.py list 2>&1";
-        $output = shell_exec($cmd);
-        
-        if ($output) {
-            $data = json_decode($output, true);
-            echo json_encode($data ?: ['error' => 'Invalid response', 'raw_output' => substr($output, 0, 500)]);
-        } else {
-            echo json_encode(['error' => 'Failed to list devices']);
-        }
-        exit();
-    } else if ($subaction === 'grant') {
-        // Get the MAC address of the device making the request
         $clientIP = $_SERVER['REMOTE_ADDR'];
+        $clientMAC = getClientMAC();
         
-        // Try to get MAC from ARP table
-        $arp = shell_exec("arp -n {$clientIP} 2>&1");
-        $mac = null;
+        // CRITICAL SECURITY CHECK: Verify session has bottle_donated flag
+        $sessionManager->cleanupExpiredSessions();
         
-        if (preg_match('/([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})/', $arp, $matches)) {
-            $mac = strtoupper(str_replace('-', ':', $matches[0]));
-        } else {
-            // Try ip neigh command
-            $ipneigh = shell_exec("ip neigh show {$clientIP} 2>&1");
-            if (preg_match('/([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})/', $ipneigh, $matches)) {
-                $mac = strtoupper(str_replace('-', ':', $matches[0]));
-            }
+        $session = $sessionManager->getActiveSessionByMAC($clientMAC);
+        
+        if (!$session) {
+            // No valid session with bottle for this device
+            echo json_encode([
+                'error' => 'NO_BOTTLE_DETECTED',
+                'message' => 'This device has not donated a bottle yet',
+                'details' => 'You must drop a bottle to get internet access. Devices without bottle donations cannot access internet.',
+                'severity' => 'SECURITY_VIOLATION',
+                'blocked' => true
+            ]);
+            error_log("[ACCESS_DENIED] MAC: {$clientMAC}, IP: {$clientIP}, Reason: No bottle-donated session");
+            exit();
         }
         
-        if (!$mac) {
+        if (!$session['bottle_donated']) {
+            // Session exists but bottle_donated is false
             echo json_encode([
-                'error' => 'Could not determine device MAC address',
-                'ip' => $clientIP,
-                'debug' => 'Device must be in ARP table. Ensure device is connected to WiFi.'
+                'error' => 'BOTTLE_REQUIRED',
+                'message' => 'Internet access requires bottle donation',
+                'details' => 'Your device is connected but must drop a bottle to get internet access',
+                'severity' => 'SECURITY_VIOLATION',
+                'blocked' => true
+            ]);
+            error_log("[ACCESS_DENIED] MAC: {$clientMAC}, IP: {$clientIP}, Reason: bottle_donated = false");
+            exit();
+        }
+        
+        // Session is valid and has bottle_donated = true, grant WiFi access
+        if (!$sessionManager->grantInternetAccess($session['session_id'], $clientMAC)) {
+            echo json_encode([
+                'error' => 'SESSION_INVALID',
+                'message' => 'Cannot grant access - session invalid or expired',
+                'severity' => 'ERROR'
             ]);
             exit();
         }
         
-        // Check if this device already has access
-        $sessionsFile = __DIR__ . '/wifi_sessions.json';
-        $sessions = [];
-        if (file_exists($sessionsFile)) {
-            $sessions = json_decode(file_get_contents($sessionsFile), true) ?: [];
-        }
-        
-        // Check for existing active session
-        $currentTime = time();
-        $hasActiveSession = false;
-        foreach ($sessions as $session) {
-            if ($session['mac'] === $mac && $session['expires_at'] > $currentTime) {
-                $hasActiveSession = true;
-                echo json_encode([
-                    'error' => 'Device already has active WiFi access',
-                    'mac' => $mac,
-                    'expires_at' => date('Y-m-d H:i:s', $session['expires_at']),
-                    'time_remaining' => $session['expires_at'] - $currentTime,
-                    'message' => 'Please wait for your current session to expire before dropping another bottle'
-                ]);
-                exit();
-            }
-        }
-        
-        // Additional security: Verify firewall rule doesn't already exist
-        $checkRule = shell_exec("sudo iptables -C FORWARD -m mac --mac-source {$mac} -j ACCEPT 2>&1");
-        if (strpos($checkRule, 'Bad rule') === false && !$hasActiveSession) {
-            // Rule exists but no session - remove orphaned rule
-            shell_exec("sudo iptables -D FORWARD -m mac --mac-source {$mac} -j ACCEPT 2>&1");
-        }
-        
-        // Grant access to specific MAC address only
-        $cmd = "sudo python3 {$scriptsDir}/wifi_control.py grant {$mac} {$duration} 2>&1";
+        // Grant iptables rule for this MAC address
+        $cmd = "sudo python3 {$scriptsDir}/wifi_control.py grant {$clientMAC} {$duration} 2>&1";
         $output = shell_exec($cmd);
         
         if ($output) {
             $data = json_decode($output, true);
             if ($data && isset($data['success']) && $data['success']) {
-                // Log the session
-                $sessions[] = [
-                    'mac' => $mac,
-                    'ip' => $clientIP,
-                    'granted_at' => $currentTime,
-                    'expires_at' => $currentTime + ($duration * 60),
-                    'duration_minutes' => $duration
-                ];
-                file_put_contents($sessionsFile, json_encode($sessions, JSON_PRETTY_PRINT));
-                
-                echo json_encode($data);
+                error_log("[ACCESS_GRANTED] MAC: {$clientMAC}, IP: {$clientIP}, Duration: {$duration}min, bottle_donated: true");
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'WiFi access granted',
+                    'mac' => $clientMAC,
+                    'duration' => $duration,
+                    'session_id' => $session['session_id'],
+                    'bottle_donated' => true
+                ]);
+                exit();
             } else {
-                echo json_encode($data ?: ['error' => 'Failed to grant access', 'raw_output' => substr($output, 0, 500)]);
+                echo json_encode($data ?: ['error' => 'Failed to grant access']);
+                exit();
             }
         } else {
-            echo json_encode(['error' => 'Failed to execute WiFi control']);
-        }
-        exit();
-    } else if ($subaction === 'revoke') {
-        // Get MAC address from parameter or client IP
-        $mac = isset($_GET['mac']) ? $_GET['mac'] : null;
-        
-        if (!$mac) {
-            $clientIP = $_SERVER['REMOTE_ADDR'];
-            $arp = shell_exec("arp -n {$clientIP} 2>&1");
-            if (preg_match('/([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})/', $arp, $matches)) {
-                $mac = strtoupper(str_replace('-', ':', $matches[0]));
-            }
-        }
-        
-        if (!$mac) {
-            echo json_encode(['error' => 'Could not determine device MAC address']);
+            echo json_encode(['error' => 'Command execution failed']);
             exit();
         }
-        
+    }
+    
+    // ============================================
+    // REVOKE WiFi
+    // ============================================
+    if ($subaction === 'revoke') {
+        $mac = isset($_GET['mac']) ? $_GET['mac'] : '';
         $cmd = "sudo python3 {$scriptsDir}/wifi_control.py revoke {$mac} 2>&1";
         $output = shell_exec($cmd);
         
@@ -228,6 +171,33 @@ if (isset($_GET['action']) && $_GET['action'] === 'sensor') {
     exit();
 }
 
+// ============================================
+// Session Stats - For Admin Dashboard
+// ============================================
+if (isset($_GET['action']) && $_GET['action'] === 'stats') {
+    $stats = $sessionManager->getStats();
+    echo json_encode([
+        'success' => true,
+        'stats' => $stats,
+        'timestamp' => date('Y-m-d H:i:s')
+    ]);
+    exit();
+}
+
 // Default response
 echo json_encode(['error' => 'Invalid action']);
+
+// ============================================
+// Helper function to get device MAC address
+// ============================================
+function getClientMAC() {
+    $mac = shell_exec("arp -a " . $_SERVER['REMOTE_ADDR'] . " 2>/dev/null | grep -oE '([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})'");
+    
+    if (!$mac) {
+        $ip_parts = explode('.', $_SERVER['REMOTE_ADDR']);
+        $mac = sprintf('%02x:%02x:%02x:%02x:%02x:%02x', $ip_parts[0], $ip_parts[1], $ip_parts[2], $ip_parts[3], 0, 0);
+    }
+    
+    return trim($mac);
+}
 ?>
