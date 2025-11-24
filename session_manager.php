@@ -261,8 +261,6 @@ class SessionManager {
     }
 }
 ?>
-<<<<<<< HEAD
-=======
 
 <?php
 /**
