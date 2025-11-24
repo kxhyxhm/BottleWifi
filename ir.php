@@ -1,12 +1,16 @@
 <?php
 // IR Sensor Detection Endpoint with Error Logging
 // Returns JSON with detection status and error details for debugging
+// UPDATED: Now creates sessions with bottle_donated flag
+
+require_once 'session_manager.php';
 
 header('Content-Type: application/json');
 
 $detected = false;
 $error = null;
 $debug = [];
+$sessionManager = new SessionManager();
 
 // ============================================
 // Step 1: Check if Python script exists
@@ -129,39 +133,31 @@ if (!isset($sensorData['detected'])) {
 }
 
 $detected = $sensorData['detected'];
-
-// Generate verification token when bottle is detected
 $verificationToken = null;
+
+// ============================================
+// CREATE SESSION WITH BOTTLE DONATION FLAG
+// ============================================
 if ($detected) {
     error_log("[BOTTLE_DETECTED] " . date('Y-m-d H:i:s'));
     
-    // Generate unique token for this detection
+    // Get device information
+    $clientMAC = getClientMAC();
+    $clientIP = $_SERVER['REMOTE_ADDR'];
+    
+    // Generate unique session token
     $verificationToken = bin2hex(random_bytes(16));
-    $tokenFile = __DIR__ . '/bottle_tokens.json';
     
-    // Load existing tokens
-    $tokens = [];
-    if (file_exists($tokenFile)) {
-        $tokens = json_decode(file_get_contents($tokenFile), true) ?: [];
-    }
+    // CREATE SESSION WITH bottle_donated = true
+    // This is the KEY: only devices that drop bottles get this flag
+    $session = $sessionManager->createSessionWithBottle(
+        $verificationToken,
+        $clientIP,
+        $clientMAC,
+        5  // 5 minutes per bottle
+    );
     
-    // Clean up expired tokens (older than 1 minute)
-    $currentTime = time();
-    foreach ($tokens as $key => $tokenData) {
-        if ($tokenData['expires_at'] < $currentTime - 60) {
-            unset($tokens[$key]);
-        }
-    }
-    
-    // Add new token (valid for 10 seconds)
-    $tokens[$verificationToken] = [
-        'created_at' => $currentTime,
-        'expires_at' => $currentTime + 10,
-        'used' => false,
-        'client_ip' => $_SERVER['REMOTE_ADDR']
-    ];
-    
-    file_put_contents($tokenFile, json_encode($tokens, JSON_PRETTY_PRINT));
+    error_log("[SESSION_CREATED] Token: {$verificationToken}, MAC: {$clientMAC}, IP: {$clientIP}, bottle_donated: true");
 }
 
 // ============================================
@@ -180,4 +176,20 @@ echo json_encode([
         'sensor_response' => $sensorData
     ]
 ]);
+
+// ============================================
+// Helper function to get device MAC address
+// ============================================
+function getClientMAC() {
+    $mac = shell_exec("arp -a " . $_SERVER['REMOTE_ADDR'] . " 2>/dev/null | grep -oE '([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})'");
+    
+    if (!$mac) {
+        // Fallback: create identifier from IP
+        $ip_parts = explode('.', $_SERVER['REMOTE_ADDR']);
+        $mac = sprintf('%02x:%02x:%02x:%02x:%02x:%02x', 
+            $ip_parts[0], $ip_parts[1], $ip_parts[2], $ip_parts[3], 0, 0);
+    }
+    
+    return trim($mac);
+}
 ?>
