@@ -14,16 +14,65 @@ def grant_wifi_access(mac_address, duration_minutes=5):
     """
     Grant WiFi access to a device for specified duration
     Uses iptables rules to control access
-    If mac_address is 'all', grants to all connected devices
+    SECURITY: 'all' access is disabled - must specify a device MAC address
     """
     try:
-        if mac_address == 'all':
-            # Create a temporary allow rule (will be removed after duration)
-            cmd = "sudo iptables -I FORWARD 1 -j ACCEPT"
-        else:
-            # Grant access to specific MAC address
-            cmd = f"sudo iptables -A FORWARD -m mac --mac-source {mac_address} -j ACCEPT"
+        # SECURITY FIX: Prevent granting access to all devices
+        if mac_address == 'all' or not mac_address:
+            return {
+                'success': False,
+                'error': 'Must specify a valid MAC address. Bulk access is not allowed for security.',
+                'security_note': 'Each device must drop a bottle individually to get access'
+            }
         
+        # Validate MAC address format
+        if not validate_mac_address(mac_address):
+            return {
+                'success': False,
+                'error': f'Invalid MAC address format: {mac_address}'
+            }
+        
+        # CRITICAL: Check if IP forwarding is enabled
+        ip_forward_check = subprocess.run(
+            "sysctl net.ipv4.ip_forward",
+            shell=True, capture_output=True, text=True
+        )
+        if "= 0" in ip_forward_check.stdout:
+            return {
+                'success': False,
+                'error': 'IP forwarding is disabled. Internet routing will not work.',
+                'fix': 'Run: sudo sysctl -w net.ipv4.ip_forward=1',
+                'severity': 'CRITICAL'
+            }
+        
+        # CRITICAL: Check if NAT/MASQUERADE is configured
+        nat_check = subprocess.run(
+            "sudo iptables -t nat -L POSTROUTING -n",
+            shell=True, capture_output=True, text=True
+        )
+        if "MASQUERADE" not in nat_check.stdout:
+            return {
+                'success': False,
+                'error': 'NAT/MASQUERADE not configured. Devices cannot access internet.',
+                'fix': 'Run: bash fix_internet.sh',
+                'severity': 'CRITICAL',
+                'details': 'Internet routing requires NAT to be configured on the gateway interface'
+            }
+        
+        # Check if this MAC already has access
+        check_cmd = f"sudo iptables -C FORWARD -m mac --mac-source {mac_address} -j ACCEPT 2>&1"
+        check_result = subprocess.run(check_cmd, shell=True, capture_output=True, text=True)
+        
+        if check_result.returncode == 0:
+            return {
+                'success': False,
+                'error': 'This device already has WiFi access',
+                'mac': mac_address,
+                'note': 'Wait for current session to expire or revoke manually'
+            }
+        
+        # Grant access to specific MAC address
+        cmd = f"sudo iptables -A FORWARD -m mac --mac-source {mac_address} -j ACCEPT"
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         
         if result.returncode != 0:
@@ -33,10 +82,7 @@ def grant_wifi_access(mac_address, duration_minutes=5):
             }
         
         # Schedule automatic revocation after duration
-        if mac_address == 'all':
-            revoke_cmd = "sudo iptables -D FORWARD 1"
-        else:
-            revoke_cmd = f"sudo iptables -D FORWARD -m mac --mac-source {mac_address} -j ACCEPT"
+        revoke_cmd = f"sudo iptables -D FORWARD -m mac --mac-source {mac_address} -j ACCEPT"
         
         # Use 'at' scheduler if available, otherwise log for manual removal
         at_result = subprocess.run(
@@ -49,13 +95,20 @@ def grant_wifi_access(mac_address, duration_minutes=5):
             'message': f'WiFi access granted for {duration_minutes} minutes',
             'mac': mac_address,
             'expires_at': (datetime.now() + timedelta(minutes=duration_minutes)).isoformat(),
-            'revoke_scheduled': at_result.returncode == 0
+            'revoke_scheduled': at_result.returncode == 0,
+            'note': 'Internet access enabled. You can now browse the web.'
         }
     except Exception as e:
         return {
             'success': False,
             'error': str(e)
         }
+
+def validate_mac_address(mac):
+    """Validate MAC address format"""
+    import re
+    pattern = r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+    return bool(re.match(pattern, mac))
 
 def revoke_wifi_access(mac_address):
     """Revoke WiFi access for a device"""
