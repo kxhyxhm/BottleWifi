@@ -130,9 +130,38 @@ if (!isset($sensorData['detected'])) {
 
 $detected = $sensorData['detected'];
 
-// Log successful detections
+// Generate verification token when bottle is detected
+$verificationToken = null;
 if ($detected) {
     error_log("[BOTTLE_DETECTED] " . date('Y-m-d H:i:s'));
+    
+    // Generate unique token for this detection
+    $verificationToken = bin2hex(random_bytes(16));
+    $tokenFile = __DIR__ . '/bottle_tokens.json';
+    
+    // Load existing tokens
+    $tokens = [];
+    if (file_exists($tokenFile)) {
+        $tokens = json_decode(file_get_contents($tokenFile), true) ?: [];
+    }
+    
+    // Clean up expired tokens (older than 1 minute)
+    $currentTime = time();
+    foreach ($tokens as $key => $tokenData) {
+        if ($tokenData['expires_at'] < $currentTime - 60) {
+            unset($tokens[$key]);
+        }
+    }
+    
+    // Add new token (valid for 10 seconds)
+    $tokens[$verificationToken] = [
+        'created_at' => $currentTime,
+        'expires_at' => $currentTime + 10,
+        'used' => false,
+        'client_ip' => $_SERVER['REMOTE_ADDR']
+    ];
+    
+    file_put_contents($tokenFile, json_encode($tokens, JSON_PRETTY_PRINT));
 }
 
 // ============================================
@@ -142,6 +171,7 @@ echo json_encode([
     'detected' => $detected,
     'timestamp' => date('Y-m-d H:i:s'),
     'status' => $detected ? 'bottle_detected' : 'waiting',
+    'verification_token' => $verificationToken,
     'raw_pin_value' => $sensorData['pin_state'] ?? null,
     'debug' => [
         'python_version' => $debug['python_version'],
