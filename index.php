@@ -237,7 +237,8 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                             timerSection.style.display = 'none';
                             successMessage.style.display = 'block';
                             
-                            startWiFiTimer();
+                            // Pass verification token to WiFi grant
+                            startWiFiTimer(data.verification_token);
                         }
                     } catch (e) {
                         console.error('Fetch error:', e);
@@ -266,17 +267,32 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                 }, 1000);
             });
 
-            function startWiFiTimer() {
+            function startWiFiTimer(verificationToken) {
                 let timeLeft = 5 * 60;
                 const display = document.getElementById('timeRemaining');
 
-                // Get device MAC address and grant WiFi access
-                fetch('hardware_control.php?action=wifi&subaction=grant&duration=5')
+                // Get device MAC address and grant WiFi access with verification token
+                if (!verificationToken) {
+                    console.error('No verification token - cannot grant WiFi access');
+                    showError('Security error: No bottle verification token', 'SECURITY_ERROR', {
+                        'message': 'This should not happen - please try again'
+                    });
+                    return;
+                }
+                
+                fetch(`hardware_control.php?action=wifi&subaction=grant&duration=5&token=${verificationToken}`)
                     .then(res => res.json())
                     .then(data => {
                         console.log('WiFi granted:', data);
                         if (data.error) {
                             console.error('WiFi grant failed:', data.error);
+                            if (data.severity === 'SECURITY_VIOLATION') {
+                                // Show security error to user
+                                successMessage.style.display = 'none';
+                                showError(data.message || data.error, 'SECURITY_ERROR', {
+                                    'details': data.details
+                                });
+                            }
                         }
                     })
                     .catch(err => console.error('WiFi control error:', err));
