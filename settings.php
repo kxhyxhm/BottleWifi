@@ -280,15 +280,6 @@ $wifi_time_minutes = floor(($settings['wifi_time'] % 3600) / 60);
         </div>
         <?php endif; ?>
 
-        <?php if (isset($error)): ?>
-        <div class="success-message" style="background: #fee2e2; color: #991b1b; border-color: #ef4444;">
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            <?php echo htmlspecialchars($error); ?>
-        </div>
-        <?php endif; ?>
-
         <form method="POST">
             <div class="card">
                 <h2 class="card-title">WiFi Session Settings</h2>
