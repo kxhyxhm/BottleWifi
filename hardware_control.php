@@ -132,6 +132,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'wifi') {
         }
         exit();
     } else if ($subaction === 'grant') {
+        // Load settings to get session duration
+        require_once __DIR__ . '/settings_handler.php';
+        $settings = getSettings();
+        $duration = round($settings['wifi_time'] / 60); // Convert seconds to minutes
+        
         // Get the MAC address of the device making the request
         $clientIP = $_SERVER['REMOTE_ADDR'];
         
@@ -206,6 +211,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'wifi') {
                 ];
                 file_put_contents($sessionsFile, json_encode($sessions, JSON_PRETTY_PRINT));
                 
+                // Add duration to response so frontend knows how long the session is
+                $data['duration_minutes'] = $duration;
                 echo json_encode($data);
             } else {
                 echo json_encode($data ?: ['error' => 'Failed to grant access', 'raw_output' => substr($output, 0, 500)]);
