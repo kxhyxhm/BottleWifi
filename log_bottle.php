@@ -6,15 +6,9 @@ header('Content-Type: application/json');
 
 $dataFile = 'recycling_data.json';
 
-// Initialize empty data structure if file doesn't exist
+// Initialize empty array if file doesn't exist (dashboard expects simple array)
 if (!file_exists($dataFile)) {
-    $initialData = [
-        'total_bottles' => 0,
-        'total_minutes_distributed' => 0,
-        'sessions' => [],
-        'created_date' => date('Y-m-d H:i:s')
-    ];
-    file_put_contents($dataFile, json_encode($initialData, JSON_PRETTY_PRINT));
+    file_put_contents($dataFile, json_encode([], JSON_PRETTY_PRINT));
 }
 
 // Handle POST request to log a recycling event
@@ -22,16 +16,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
     
     if (isset($data['action']) && $data['action'] === 'log_bottle') {
-        $recyclingData = json_decode(file_get_contents($dataFile), true);
+        $recyclingData = json_decode(file_get_contents($dataFile), true) ?: [];
         
-        $recyclingData['total_bottles']++;
-        $recyclingData['total_minutes_distributed'] += 5; // 1 bottle = 5 minutes
+        // Get device MAC address
+        $clientIP = $_SERVER['REMOTE_ADDR'];
+        $mac = null;
         
-        $recyclingData['sessions'][] = [
-            'bottle_number' => $recyclingData['total_bottles'],
+        $arp = shell_exec("arp -n {$clientIP} 2>&1");
+        if (preg_match('/([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})/', $arp, $matches)) {
+            $mac = strtoupper(str_replace('-', ':', $matches[0]));
+        } else {
+            $ipneigh = shell_exec("ip neigh show {$clientIP} 2>&1");
+            if (preg_match('/([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})/', $ipneigh, $matches)) {
+                $mac = strtoupper(str_replace('-', ':', $matches[0]));
+            }
+        }
+        
+        // Add new bottle entry (format that dashboard expects)
+        $recyclingData[] = [
             'timestamp' => date('Y-m-d H:i:s'),
+            'mac' => $mac ?: 'Unknown',
+            'ip' => $clientIP,
             'minutes_granted' => 5,
-            'device_ip' => $_SERVER['REMOTE_ADDR'],
             'user_agent' => substr($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown', 0, 100)
         ];
         
@@ -40,7 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode([
             'success' => true,
             'message' => 'Bottle logged successfully',
-            'total_bottles' => $recyclingData['total_bottles']
+            'total_bottles' => count($recyclingData),
+            'device_mac' => $mac
         ]);
         exit();
     }
