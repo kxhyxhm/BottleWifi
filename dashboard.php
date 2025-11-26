@@ -11,17 +11,37 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 $recyclingFile = __DIR__ . '/recycling_data.json';
 $sessionsFile = __DIR__ . '/wifi_sessions.json';
 
-$recyclingData = file_exists($recyclingFile) ? json_decode(file_get_contents($recyclingFile), true) : [];
-$sessions = file_exists($sessionsFile) ? json_decode(file_get_contents($sessionsFile), true) : [];
+$recyclingData = [];
+$sessions = [];
+
+// Load recycling data
+if (file_exists($recyclingFile)) {
+    $content = file_get_contents($recyclingFile);
+    $recyclingData = json_decode($content, true) ?: [];
+}
+
+// Load sessions data
+if (file_exists($sessionsFile)) {
+    $content = file_get_contents($sessionsFile);
+    $sessions = json_decode($content, true) ?: [];
+    
+    // Ensure sessions is an array (not object)
+    if (!is_array($sessions)) {
+        $sessions = [];
+    }
+}
 
 // Calculate statistics
-$totalBottles = count($recyclingData);
+$totalBottles = is_array($recyclingData) ? count($recyclingData) : 0;
 $currentTime = time();
 
-// Get active sessions
-$activeSessions = array_filter($sessions, function($session) use ($currentTime) {
-    return $session['expires_at'] > $currentTime;
-});
+// Get active sessions (with validation)
+$activeSessions = [];
+if (is_array($sessions)) {
+    $activeSessions = array_filter($sessions, function($session) use ($currentTime) {
+        return isset($session['expires_at']) && $session['expires_at'] > $currentTime;
+    });
+}
 
 // Get unique users and their bottle counts
 $userBottleCounts = [];
@@ -360,6 +380,27 @@ $activeUsers = count($activeSessions);
                 <a href="logout.php" class="btn btn-primary">Logout</a>
             </div>
         </div>
+
+        <?php 
+        // Debug info - remove after testing
+        $debugInfo = [
+            'recycling_file_exists' => file_exists($recyclingFile),
+            'sessions_file_exists' => file_exists($sessionsFile),
+            'recycling_count' => count($recyclingData),
+            'sessions_count' => count($sessions),
+            'active_sessions_count' => count($activeSessions)
+        ];
+        if (!file_exists($sessionsFile) || count($sessions) == 0): 
+        ?>
+            <div style="background: #fef3c7; border: 2px solid #f59e0b; color: #92400e; padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem; font-size: 0.875rem;">
+                <strong>⚠️ Debug Info:</strong><br>
+                Sessions file exists: <?php echo file_exists($sessionsFile) ? 'Yes' : 'No'; ?><br>
+                Sessions in file: <?php echo count($sessions); ?><br>
+                <?php if (!file_exists($sessionsFile)): ?>
+                    <em>The wifi_sessions.json file will be created automatically when a user drops their first bottle and gets WiFi access.</em>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
         <!-- Statistics Cards -->
         <div class="stats-grid">
