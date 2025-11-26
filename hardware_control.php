@@ -1,16 +1,14 @@
 <?php
 // Hardware Control API
 // Provides interface between PHP and Python hardware scripts
-// UPDATED: Now enforces per-device internet access based on bottle donations
-
-require_once 'session_manager.php';
 
 header('Content-Type: application/json');
 
 $scriptsDir = __DIR__;
-$sessionManager = new SessionManager();
 
 // SECURITY: Verify firewall is properly configured on every request
+// NOTE: With daemon-controlled system, FORWARD policy can be DROP or ACCEPT
+// DROP = no bottle (normal), ACCEPT = bottle detected (normal)
 function verifyFirewallConfig() {
     $defaultPolicy = shell_exec("sudo iptables -L FORWARD -n | grep 'Chain FORWARD' 2>&1");
     
@@ -22,15 +20,18 @@ function verifyFirewallConfig() {
         ];
     }
     
-    if (strpos($defaultPolicy, '(policy ACCEPT)') !== false) {
+    // Check if NAT/MASQUERADE is configured (required for internet)
+    $natCheck = shell_exec("sudo iptables -t nat -L POSTROUTING -n 2>&1");
+    if (!$natCheck || strpos($natCheck, 'MASQUERADE') === false) {
         return [
             'configured' => false,
-            'error' => 'Firewall default policy is ACCEPT - all devices have unrestricted access',
-            'fix' => 'Run: bash fix_firewall.sh',
+            'error' => 'NAT/MASQUERADE not configured. Run: bash fix_internet.sh',
             'severity' => 'CRITICAL'
         ];
     }
     
+    // With daemon mode, both DROP and ACCEPT policies are valid
+    // DROP = waiting for bottle, ACCEPT = bottle detected
     return ['configured' => true];
 }
 
@@ -38,13 +39,12 @@ function verifyFirewallConfig() {
 // WiFi Control
 // ============================================
 if (isset($_GET['action']) && $_GET['action'] === 'wifi') {
-    // SECURITY CHECK: Verify firewall before processing any WiFi requests
+    // SECURITY CHECK: Verify NAT is configured (critical for internet)
     $firewallCheck = verifyFirewallConfig();
     if (!$firewallCheck['configured']) {
         echo json_encode([
-            'error' => 'FIREWALL MISCONFIGURED',
+            'error' => 'SYSTEM MISCONFIGURED',
             'details' => $firewallCheck['error'],
-            'fix' => $firewallCheck['fix'] ?? 'Contact administrator',
             'severity' => $firewallCheck['severity'],
             'blocked' => true
         ]);
@@ -57,54 +57,33 @@ if (isset($_GET['action']) && $_GET['action'] === 'wifi') {
     // SECURITY: Verify bottle detection token for grant requests
     if ($subaction === 'grant') {
         $verificationToken = isset($_GET['token']) ? $_GET['token'] : '';
-        $clientIP = $_SERVER['REMOTE_ADDR'];
-        $clientMAC = getClientMAC();
         
-        // CRITICAL SECURITY CHECK: Verify device has bottle-donated session
-        $sessionManager->cleanupExpiredSessions();
+        // Check if this is a valid bottle detection token
+        $tokenFile = __DIR__ . '/bottle_tokens.json';
+        $validToken = false;
         
-        // Get session by verification token
-        $allSessions = $sessionManager->getAllSessions();
-        $session = isset($allSessions[$verificationToken]) ? $allSessions[$verificationToken] : null;
-        
-        if (!$session) {
-            echo json_encode([
-                'error' => 'NO_BOTTLE_DETECTED',
-                'message' => 'This device has not donated a bottle yet',
-                'details' => 'You must drop a bottle to get internet access. No valid session found.',
-                'severity' => 'SECURITY_VIOLATION',
-                'blocked' => true
-            ]);
-            error_log("[ACCESS_DENIED] MAC: {$clientMAC}, IP: {$clientIP}, Reason: No session for token");
-            exit();
+        if (file_exists($tokenFile)) {
+            $tokens = json_decode(file_get_contents($tokenFile), true) ?: [];
+            $currentTime = time();
+            
+            // Check if token exists and is not expired (tokens valid for 10 seconds)
+            if (isset($tokens[$verificationToken])) {
+                $tokenData = $tokens[$verificationToken];
+                if ($tokenData['expires_at'] > $currentTime && !$tokenData['used']) {
+                    $validToken = true;
+                    // Mark token as used
+                    $tokens[$verificationToken]['used'] = true;
+                    file_put_contents($tokenFile, json_encode($tokens, JSON_PRETTY_PRINT));
+                }
+            }
         }
         
-        if (!$session['bottle_donated']) {
+        if (!$validToken) {
             echo json_encode([
-                'error' => 'BOTTLE_REQUIRED',
-                'message' => 'Internet access requires bottle donation',
-                'details' => 'Session exists but bottle_donated = false',
-                'severity' => 'SECURITY_VIOLATION',
-                'blocked' => true
-            ]);
-            error_log("[ACCESS_DENIED] MAC: {$clientMAC}, IP: {$clientIP}, Reason: bottle_donated = false");
-            exit();
-        }
-        
-        if ($session['expires_at'] < time()) {
-            echo json_encode([
-                'error' => 'SESSION_EXPIRED',
-                'message' => 'Bottle detection session has expired',
-                'severity' => 'ERROR'
-            ]);
-            exit();
-        }
-        
-        // Mark session as internet granted
-        if (!$sessionManager->grantInternetAccess($verificationToken, $clientMAC)) {
-            echo json_encode([
-                'error' => 'GRANT_FAILED',
-                'message' => 'Failed to mark session as granted'
+                'error' => 'BOTTLE_DETECTION_REQUIRED',
+                'message' => 'You must drop a bottle first to get WiFi access',
+                'details' => 'No valid bottle detection token provided. This prevents unauthorized access.',
+                'severity' => 'SECURITY_VIOLATION'
             ]);
             exit();
         }
@@ -255,20 +234,4 @@ if (isset($_GET['action']) && $_GET['action'] === 'sensor') {
 
 // Default response
 echo json_encode(['error' => 'Invalid action']);
-
-// ============================================
-// Helper function to get device MAC address
-// ============================================
-function getClientMAC() {
-    $mac = shell_exec("arp -a " . $_SERVER['REMOTE_ADDR'] . " 2>/dev/null | grep -oE '([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})'");
-    
-    if (!$mac) {
-        // Fallback: create identifier from IP
-        $ip_parts = explode('.', $_SERVER['REMOTE_ADDR']);
-        $mac = sprintf('%02x:%02x:%02x:%02x:%02x:%02x', 
-            $ip_parts[0], $ip_parts[1], $ip_parts[2], $ip_parts[3], 0, 0);
-    }
-    
-    return trim($mac);
-}
 ?>
