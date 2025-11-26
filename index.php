@@ -312,8 +312,15 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
 
                     if (timeLeft <= 0) {
                         clearInterval(wifiTimer);
-                        successMessage.querySelector('.subtitle').textContent =
-                            'Session ended. Insert another bottle.';
+                        
+                        // Session ended - redirect to main page
+                        successMessage.style.display = 'none';
+                        
+                        // Show "Session Ended" message
+                        alert('Your WiFi session has ended. Drop another bottle to continue using the internet.');
+                        
+                        // Redirect to main page
+                        window.location.reload();
                     }
                 }, 1000);
             }
