@@ -33,201 +33,331 @@ $wifi_time_minutes = floor(($settings['wifi_time'] % 3600) / 60);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings — BottleWifi</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="dashboard.css">
+    <title>Settings — BottleWifi Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .time-control {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            margin-bottom: 1rem;
+        :root {
+            --bg: #f0fdf4;
+            --card: #ffffff;
+            --accent: #059669;
+            --success: #10b981;
+            --muted: #65a88a;
+            --gradient-start: #34d399;
+            --gradient-end: #059669;
+            --border: rgba(5, 150, 105, 0.1);
+            --text-primary: #064e3b;
+            --text-secondary: #6b7280;
         }
 
-        .time-input {
-            width: 100px !important;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 10px 10px, rgba(147, 197, 153, 0.1) 2px, transparent 0);
+            background-size: 24px 24px;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header h1 {
+            color: var(--accent);
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .btn {
+            padding: 0.5rem 1.25rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: 2px solid var(--accent);
+            font-size: 0.875rem;
+            display: inline-block;
+            background: transparent;
+            color: var(--accent);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         .success-message {
-            background: rgba(34, 197, 94, 0.1);
-            color: var(--success);
+            background: #d1fae5;
+            color: #065f46;
+            border: 2px solid var(--success);
             padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            font-size: 0.875rem;
         }
 
-        .settings-card {
-            animation: fadeIn 0.3s ease-out;
+        .card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 2rem;
+            border: 4px solid var(--border);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 1.5rem;
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+        .card-title {
+            color: var(--text-primary);
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .form-help {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+        }
+
+        .time-control {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .time-control .form-input {
+            flex: 1;
+        }
+
+        .time-control select {
+            width: auto;
+            min-width: 120px;
+        }
+
+        .btn-save {
+            width: 100%;
+            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+            color: white;
+            border: 0;
+            padding: 0.875rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+        }
+
+        .toggle-switch input[type="checkbox"] {
+            width: 48px;
+            height: 24px;
+            appearance: none;
+            background: #d1d5db;
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .toggle-switch input[type="checkbox"]:checked {
+            background: var(--accent);
+        }
+
+        .toggle-switch input[type="checkbox"]::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s;
+        }
+
+        .toggle-switch input[type="checkbox"]:checked::before {
+            left: 26px;
+        }
+
+        .info-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-item strong {
+            color: var(--text-primary);
+        }
+
+        @media (max-width: 768px) {
+            .time-control {
+                flex-direction: column;
+                align-items: stretch;
             }
         }
     </style>
 </head>
 <body>
-    <div class="dust-container"></div>
-    <div class="dashboard">
-        <!-- Include the same sidebar as dashboard.php -->
-        <aside class="sidebar">
-            <div class="logo">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                        d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.14 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-                </svg>
-                <h1>BottleWifi</h1>
-            </div>
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ Settings</h1>
+            <a href="dashboard.php" class="btn">← Back to Dashboard</a>
+        </div>
 
-            <nav>
-                <ul class="nav-menu">
-                    <li class="nav-item">
-                        <a href="dashboard.php" class="nav-link">
-                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                            </svg>
-                            Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="settings.php" class="nav-link active">
-                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                            </svg>
-                            Settings
-                        </a>
-                    </li>
-                    <!-- Other nav items... -->
-                </ul>
-            </nav>
-        </aside>
+        <?php if (isset($success)): ?>
+        <div class="success-message">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Settings saved successfully!
+        </div>
+        <?php endif; ?>
 
-        <main class="main-content">
-            <header class="header">
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <a href="dashboard.php" class="back-button">
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                        Back to Dashboard
-                    </a>
-                    <h2 class="welcome">Network Settings</h2>
-                </div>
-                <div class="date" id="current-date"></div>
-            </header>
+        <form method="POST">
+            <div class="card">
+                <h2 class="card-title">WiFi Session Settings</h2>
 
-            <?php if (isset($success)): ?>
-            <div class="success-message">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-                Settings saved successfully
-            </div>
-            <?php endif; ?>
-
-            <div class="settings-grid">
-                <div class="setting-card">
-                    <h3>WiFi Time Control</h3>
-                    <form method="POST" class="settings-form">
-                        <div class="form-group">
-                            <label>Session Duration</label>
-                            <div class="time-control">
-                                <input type="number" name="wifi_time" class="form-input time-input" 
-                                    value="<?php echo $wifi_time_hours > 0 ? $wifi_time_hours : $wifi_time_minutes; ?>" 
-                                    min="1" required>
-                                <select name="time_unit" class="form-input">
-                                    <option value="hours" <?php echo $wifi_time_hours > 0 ? 'selected' : ''; ?>>Hours</option>
-                                    <option value="minutes" <?php echo $wifi_time_hours === 0 ? 'selected' : ''; ?>>Minutes</option>
-                                </select>
-                            </div>
-                            <p style="font-size: 0.875rem; color: var(--muted); margin-top: 0.5rem;">
-                                Set the duration for each WiFi session
-                            </p>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Network Name (SSID)</label>
-                            <input type="text" name="ssid" class="form-input" 
-                                value="<?php echo htmlspecialchars($settings['ssid']); ?>" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Security Mode</label>
-                            <select name="security_mode" class="form-input">
-                                <option value="WPA3-Personal" <?php echo $settings['security_mode'] === 'WPA3-Personal' ? 'selected' : ''; ?>>WPA3-Personal</option>
-                                <option value="WPA2-Personal" <?php echo $settings['security_mode'] === 'WPA2-Personal' ? 'selected' : ''; ?>>WPA2-Personal</option>
-                                <option value="WPA/WPA2-Personal" <?php echo $settings['security_mode'] === 'WPA/WPA2-Personal' ? 'selected' : ''; ?>>WPA/WPA2-Personal</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Channel</label>
-                            <select name="channel" class="form-input">
-                                <option value="Auto" <?php echo $settings['channel'] === 'Auto' ? 'selected' : ''; ?>>Auto</option>
-                                <?php for($i = 1; $i <= 11; $i++): ?>
-                                <option value="<?php echo $i; ?>" <?php echo $settings['channel'] == $i ? 'selected' : ''; ?>><?php echo $i; ?></option>
-                                <?php endfor; ?>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="toggle-switch">
-                                <input type="checkbox" name="firewall" 
-                                    <?php echo $settings['firewall_enabled'] ? 'checked' : ''; ?>>
-                                Enable Firewall
-                            </label>
-                        </div>
-
-                        <button type="submit" class="btn-save">Save Changes</button>
-                    </form>
-                </div>
-
-                <div class="setting-card">
-                    <h3>Current Status</h3>
-                    <div style="color: var(--muted); margin-top: 1rem;">
-                        <p>
-                            <strong>Active Session Time:</strong> 
-                            <?php 
-                            if ($settings['wifi_time'] >= 3600) {
-                                echo floor($settings['wifi_time'] / 3600) . ' hours';
-                            } else {
-                                echo floor($settings['wifi_time'] / 60) . ' minutes';
-                            }
-                            ?>
-                        </p>
-                        <p style="margin-top: 0.5rem;">
-                            <strong>Network Name:</strong> 
-                            <?php echo htmlspecialchars($settings['ssid']); ?>
-                        </p>
-                        <p style="margin-top: 0.5rem;">
-                            <strong>Security:</strong> 
-                            <?php echo htmlspecialchars($settings['security_mode']); ?>
-                        </p>
-                        <p style="margin-top: 0.5rem;">
-                            <strong>Channel:</strong> 
-                            <?php echo htmlspecialchars($settings['channel']); ?>
-                        </p>
-                        <p style="margin-top: 0.5rem;">
-                            <strong>Firewall:</strong> 
-                            <?php echo $settings['firewall_enabled'] ? 'Enabled' : 'Disabled'; ?>
-                        </p>
+                <div class="form-group">
+                    <label>Session Duration per Bottle</label>
+                    <div class="time-control">
+                        <input type="number" name="wifi_time" class="form-input" 
+                            value="<?php echo $wifi_time_hours > 0 ? $wifi_time_hours : $wifi_time_minutes; ?>" 
+                            min="1" max="999" required>
+                        <select name="time_unit" class="form-input">
+                            <option value="minutes" <?php echo $wifi_time_hours === 0 ? 'selected' : ''; ?>>Minutes</option>
+                            <option value="hours" <?php echo $wifi_time_hours > 0 ? 'selected' : ''; ?>>Hours</option>
+                        </select>
                     </div>
+                    <div class="form-help">Duration of internet access given when a user drops a bottle</div>
                 </div>
-            </div>
-        </main>
-    </div>
 
-    <script src="dashboard.js"></script>
+                <div class="form-group">
+                    <label>Network Name (SSID)</label>
+                    <input type="text" name="ssid" class="form-input" 
+                        value="<?php echo htmlspecialchars($settings['ssid']); ?>" 
+                        maxlength="32" required>
+                    <div class="form-help">The name of your WiFi network (max 32 characters)</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Security Mode</label>
+                    <select name="security_mode" class="form-input">
+                        <option value="WPA3-Personal" <?php echo $settings['security_mode'] === 'WPA3-Personal' ? 'selected' : ''; ?>>WPA3-Personal (Recommended)</option>
+                        <option value="WPA2-Personal" <?php echo $settings['security_mode'] === 'WPA2-Personal' ? 'selected' : ''; ?>>WPA2-Personal</option>
+                        <option value="WPA/WPA2-Personal" <?php echo $settings['security_mode'] === 'WPA/WPA2-Personal' ? 'selected' : ''; ?>>WPA/WPA2-Personal</option>
+                    </select>
+                    <div class="form-help">WiFi encryption standard</div>
+                </div>
+
+                <div class="form-group">
+                    <label>WiFi Channel</label>
+                    <select name="channel" class="form-input">
+                        <option value="Auto" <?php echo $settings['channel'] === 'Auto' ? 'selected' : ''; ?>>Auto</option>
+                        <?php for($i = 1; $i <= 11; $i++): ?>
+                        <option value="<?php echo $i; ?>" <?php echo $settings['channel'] == $i ? 'selected' : ''; ?>>Channel <?php echo $i; ?></option>
+                        <?php endfor; ?>
+                    </select>
+                    <div class="form-help">WiFi channel selection (Auto is recommended)</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="firewall" 
+                            <?php echo $settings['firewall_enabled'] ? 'checked' : ''; ?>>
+                        <span>Enable Firewall</span>
+                    </label>
+                    <div class="form-help">Controls per-device internet access via iptables</div>
+                </div>
+
+                <button type="submit" class="btn-save">💾 Save Settings</button>
+            </div>
+        </form>
+
+        <div class="card">
+            <h2 class="card-title">Current Configuration</h2>
+            <div class="info-item">
+                <strong>Session Duration:</strong> 
+                <?php 
+                if ($settings['wifi_time'] >= 3600) {
+                    echo floor($settings['wifi_time'] / 3600) . ' hour(s)';
+                } else {
+                    echo floor($settings['wifi_time'] / 60) . ' minute(s)';
+                }
+                ?>
+            </div>
+            <div class="info-item">
+                <strong>Network Name:</strong> <?php echo htmlspecialchars($settings['ssid']); ?>
+            </div>
+            <div class="info-item">
+                <strong>Security:</strong> <?php echo htmlspecialchars($settings['security_mode']); ?>
+            </div>
+            <div class="info-item">
+                <strong>Channel:</strong> <?php echo htmlspecialchars($settings['channel']); ?>
+            </div>
+            <div class="info-item">
+                <strong>Firewall:</strong> <?php echo $settings['firewall_enabled'] ? '✓ Enabled' : '✗ Disabled'; ?>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
