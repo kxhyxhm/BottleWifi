@@ -268,7 +268,6 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
             });
 
             function startWiFiTimer(verificationToken) {
-                let timeLeft = 5 * 60;
                 const display = document.getElementById('timeRemaining');
 
                 // Get device MAC address and grant WiFi access with verification token
@@ -280,7 +279,8 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                     return;
                 }
                 
-                fetch(`hardware_control.php?action=wifi&subaction=grant&duration=5&token=${verificationToken}`)
+                // Fetch duration from settings (remove hardcoded duration parameter)
+                fetch(`hardware_control.php?action=wifi&subaction=grant&token=${verificationToken}`)
                     .then(res => res.json())
                     .then(data => {
                         console.log('WiFi granted:', data);
@@ -292,8 +292,47 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                                 showError(data.message || data.error, 'SECURITY_ERROR', {
                                     'details': data.details
                                 });
+                                return;
                             }
                         }
+                        
+                        // Use duration from response (in minutes)
+                        const durationMinutes = data.duration_minutes || 5;
+                        let timeLeft = durationMinutes * 60;
+                        
+                        // Start the countdown timer
+                        const wifiTimer = setInterval(function () {
+                            timeLeft--;
+                            const m = Math.floor(timeLeft / 60);
+                            const s = timeLeft % 60;
+                            display.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+
+                            if (timeLeft <= 0) {
+                                clearInterval(wifiTimer);
+                                
+                                // Session ended - revoke internet access
+                                successMessage.style.display = 'none';
+                                
+                                // Revoke WiFi access immediately
+                                fetch('hardware_control.php?action=wifi&subaction=revoke')
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        console.log('WiFi revoked:', data);
+                                        
+                                        // Show "Session Ended" message
+                                        alert('Your WiFi session has ended. Drop another bottle to continue using the internet.');
+                                        
+                                        // Redirect to main page
+                                        window.location.reload();
+                                    })
+                                    .catch(err => {
+                                        console.error('Failed to revoke WiFi:', err);
+                                        // Still redirect even if revoke fails
+                                        alert('Your WiFi session has ended. Drop another bottle to continue using the internet.');
+                                        window.location.reload();
+                                    });
+                            }
+                        }, 1000);
                     })
                     .catch(err => console.error('WiFi control error:', err));
 
@@ -303,39 +342,6 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: 'log_bottle' })
                 }).catch(err => console.error('Failed to log bottle:', err));
-
-                const wifiTimer = setInterval(function () {
-                    timeLeft--;
-                    const m = Math.floor(timeLeft / 60);
-                    const s = timeLeft % 60;
-                    display.textContent = `${m}:${s.toString().padStart(2, '0')}`;
-
-                    if (timeLeft <= 0) {
-                        clearInterval(wifiTimer);
-                        
-                        // Session ended - revoke internet access
-                        successMessage.style.display = 'none';
-                        
-                        // Revoke WiFi access immediately
-                        fetch('hardware_control.php?action=wifi&subaction=revoke')
-                            .then(res => res.json())
-                            .then(data => {
-                                console.log('WiFi revoked:', data);
-                                
-                                // Show "Session Ended" message
-                                alert('Your WiFi session has ended. Drop another bottle to continue using the internet.');
-                                
-                                // Redirect to main page
-                                window.location.reload();
-                            })
-                            .catch(err => {
-                                console.error('Failed to revoke WiFi:', err);
-                                // Still redirect even if revoke fails
-                                alert('Your WiFi session has ended. Drop another bottle to continue using the internet.');
-                                window.location.reload();
-                            });
-                    }
-                }, 1000);
             }
         });
     </script>
