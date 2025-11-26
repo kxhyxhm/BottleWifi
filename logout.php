@@ -1,17 +1,9 @@
 <?php
 session_start();
 
-// Check if user is logged in
-if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
-    header("Location: login.html");
-    exit();
-}
-
-// Clear session and cookies on logout
+// Logout
+$_SESSION = array();
 session_destroy();
-setcookie("remember_token", "", time() - 3600, "/");
-
-// Redirect to login page
-header("Location: login.html");
-exit();
+header('Location: admin-login.php');
+exit;
 ?>
