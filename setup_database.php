@@ -28,7 +28,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['initialize'])) {
         
         // Check if file already exists
         if (file_exists($filePath)) {
-            $success[] = "✓ {$filename} already exists";
+            // Try to make it writable if it isn't
+            if (!is_writable($filePath)) {
+                @chmod($filePath, 0664);
+                if (is_writable($filePath)) {
+                    $success[] = "✓ {$filename} already exists (fixed permissions)";
+                } else {
+                    $errors[] = "⚠ {$filename} exists but cannot make writable (need sudo)";
+                }
+            } else {
+                $success[] = "✓ {$filename} already exists and is writable";
+            }
             continue;
         }
         
@@ -38,17 +48,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['initialize'])) {
         if ($result !== false) {
             // Try to set permissions
             @chmod($filePath, 0664);
-            $success[] = "✓ Created {$filename}";
+            $success[] = "✓ Created {$filename} successfully";
         } else {
-            $errors[] = "✗ Failed to create {$filename} (check permissions)";
+            // More detailed error
+            $dir_writable = is_writable($baseDir);
+            $errors[] = "✗ Failed to create {$filename} - Directory " . ($dir_writable ? "IS" : "NOT") . " writable";
         }
     }
     
-    // Check if files are writable
+    // Final check - verify all files are accessible
     foreach (array_keys($files) as $filename) {
         $filePath = $baseDir . '/' . $filename;
         if (file_exists($filePath) && !is_writable($filePath)) {
-            $errors[] = "⚠ {$filename} exists but is not writable";
+            $errors[] = "⚠ {$filename} is not writable by web server";
         }
     }
     
