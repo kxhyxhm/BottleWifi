@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     
     // Simple authentication - you should use proper password hashing in production
-    if ($username === 'admin' && $password === 'bottlewifi') {
+    if ($username === 'admin' && $password === 'RKM_admin_bottlewifi') {
         $_SESSION['admin_logged_in'] = true;
         header('Location: dashboard.php');
         exit;
