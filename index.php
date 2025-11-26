@@ -313,14 +313,27 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                     if (timeLeft <= 0) {
                         clearInterval(wifiTimer);
                         
-                        // Session ended - redirect to main page
+                        // Session ended - revoke internet access
                         successMessage.style.display = 'none';
                         
-                        // Show "Session Ended" message
-                        alert('Your WiFi session has ended. Drop another bottle to continue using the internet.');
-                        
-                        // Redirect to main page
-                        window.location.reload();
+                        // Revoke WiFi access immediately
+                        fetch('hardware_control.php?action=wifi&subaction=revoke')
+                            .then(res => res.json())
+                            .then(data => {
+                                console.log('WiFi revoked:', data);
+                                
+                                // Show "Session Ended" message
+                                alert('Your WiFi session has ended. Drop another bottle to continue using the internet.');
+                                
+                                // Redirect to main page
+                                window.location.reload();
+                            })
+                            .catch(err => {
+                                console.error('Failed to revoke WiFi:', err);
+                                // Still redirect even if revoke fails
+                                alert('Your WiFi session has ended. Drop another bottle to continue using the internet.');
+                                window.location.reload();
+                            });
                     }
                 }, 1000);
             }
@@ -328,4 +341,3 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
     </script>
 </body>
 </html>
-
