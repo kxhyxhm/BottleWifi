@@ -1,4 +1,8 @@
 <?php
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 session_start();
 
 // Check authentication
@@ -7,7 +11,7 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     exit;
 }
 
-require_once 'settings_handler.php';
+require_once __DIR__ . '/settings_handler.php';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -19,8 +23,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'firewall_enabled' => isset($_POST['firewall'])
     ];
     
-    saveSettings($settings);
-    $success = true;
+    if (saveSettings($settings)) {
+        $success = true;
+    } else {
+        $error = "Failed to save settings. Check file permissions.";
+    }
 }
 
 // Get current settings
@@ -270,6 +277,15 @@ $wifi_time_minutes = floor(($settings['wifi_time'] % 3600) / 60);
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
             Settings saved successfully!
+        </div>
+        <?php endif; ?>
+
+        <?php if (isset($error)): ?>
+        <div class="success-message" style="background: #fee2e2; color: #991b1b; border-color: #ef4444;">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            <?php echo htmlspecialchars($error); ?>
         </div>
         <?php endif; ?>
 
