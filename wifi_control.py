@@ -12,10 +12,8 @@ from datetime import datetime, timedelta
 
 def grant_wifi_access(mac_address, duration_minutes=5):
     """
-    Grant WiFi access to a device for specified duration
-    NOTE: This now works in conjunction with bottle_internet_daemon.py
-    - Daemon controls global internet access (bottle present = internet on)
-    - This script manages per-device session tracking only
+    Grant WiFi access to a SPECIFIC device for specified duration
+    Each device must drop a bottle individually to get internet access
     SECURITY: 'all' access is disabled - must specify a device MAC address
     """
     try:
@@ -33,33 +31,6 @@ def grant_wifi_access(mac_address, duration_minutes=5):
                 'success': False,
                 'error': f'Invalid MAC address format: {mac_address}'
             }
-        
-        # CRITICAL: Check if bottle daemon is controlling internet access
-        try:
-            with open('/tmp/bottle_internet_status.json', 'r') as f:
-                status = json.load(f)
-                if not status.get('internet_enabled', False):
-                    return {
-                        'success': False,
-                        'error': 'NO BOTTLE DETECTED - Internet access is currently disabled',
-                        'message': 'A bottle must be present in the system for internet access',
-                        'severity': 'BOTTLE_REQUIRED',
-                        'daemon_status': 'Internet controlled by bottle detection daemon'
-                    }
-        except FileNotFoundError:
-            # Daemon not running, fall back to manual check
-            forward_policy = subprocess.run(
-                "sudo iptables -L FORWARD -n | grep 'Chain FORWARD' | grep -o 'policy [A-Z]*'",
-                shell=True, capture_output=True, text=True
-            )
-            if "DROP" in forward_policy.stdout:
-                return {
-                    'success': False,
-                    'error': 'Internet access is currently DISABLED (no bottle detected)',
-                    'message': 'The bottle detection daemon must be running and a bottle must be present',
-                    'fix': 'Start daemon: sudo python3 bottle_internet_daemon.py',
-                    'severity': 'CRITICAL'
-                }
         
         # CRITICAL: Check if IP forwarding is enabled
         ip_forward_check = subprocess.run(
@@ -88,17 +59,45 @@ def grant_wifi_access(mac_address, duration_minutes=5):
                 'details': 'Internet routing requires NAT to be configured on the gateway interface'
             }
         
-        # SUCCESS: Internet is enabled via bottle daemon, session logged
-        # Note: With daemon mode, FORWARD policy is ACCEPT when bottle present
-        # No need to add per-MAC rules - all devices get access when bottle is present
+        # Check if this MAC already has access
+        check_cmd = f"sudo iptables -C FORWARD -m mac --mac-source {mac_address} -j ACCEPT 2>&1"
+        check_result = subprocess.run(check_cmd, shell=True, capture_output=True, text=True)
+        
+        if check_result.returncode == 0:
+            return {
+                'success': False,
+                'error': 'This device already has WiFi access',
+                'mac': mac_address,
+                'note': 'Wait for current session to expire or revoke manually'
+            }
+        
+        # Grant access to SPECIFIC MAC address ONLY (per-device control)
+        cmd = f"sudo iptables -A FORWARD -m mac --mac-source {mac_address} -j ACCEPT"
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            return {
+                'success': False,
+                'error': result.stderr or 'iptables command failed'
+            }
+        
+        # Schedule automatic revocation after duration
+        revoke_cmd = f"sudo iptables -D FORWARD -m mac --mac-source {mac_address} -j ACCEPT"
+        
+        # Use 'at' scheduler if available, otherwise log for manual removal
+        at_result = subprocess.run(
+            f"echo '{revoke_cmd}' | sudo at now + {duration_minutes} minutes 2>&1",
+            shell=True, capture_output=True, text=True
+        )
         
         return {
             'success': True,
             'message': f'WiFi access granted for {duration_minutes} minutes',
             'mac': mac_address,
             'expires_at': (datetime.now() + timedelta(minutes=duration_minutes)).isoformat(),
-            'note': 'Internet access enabled via bottle detection. All devices connected have access while bottle is present.',
-            'mode': 'daemon_controlled'
+            'revoke_scheduled': at_result.returncode == 0,
+            'note': 'Internet access enabled for THIS DEVICE ONLY. Other devices must drop their own bottle.',
+            'mode': 'per_device'
         }
     except Exception as e:
         return {
