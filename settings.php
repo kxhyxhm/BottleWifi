@@ -17,6 +17,7 @@ require_once __DIR__ . '/settings_handler.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $newSettings = [
         'wifi_time' => intval($_POST['wifi_time']) * ($_POST['time_unit'] === 'hours' ? 3600 : 60),
+        'ssid' => $_POST['ssid'],
         'security_mode' => $_POST['security_mode'],
         'channel' => $_POST['channel'],
         'firewall_enabled' => isset($_POST['firewall'])
