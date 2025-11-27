@@ -343,7 +343,7 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                         });
                     }
                 }, 1000);
-            });
+            }
 
             function startWiFiTimer(verificationToken, numBottles = 1) {
                 const display = document.getElementById('timeRemaining');
@@ -417,9 +417,6 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                         }, 1000);
                     })
                     .catch(err => console.error('WiFi control error:', err));
-            }
-            
-            // Close startBottleDetection function
             }
         });
     </script>
