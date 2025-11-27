@@ -76,6 +76,11 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
             <span>Done - Get WiFi</span>
             <span class="emoji">✓</span>
         </button>
+
+        <div id="errorMessage" style="display: none; background: #fee2e2; border: 2px solid #fca5a5; color: #991b1b; padding: 1rem; border-radius: 12px; margin-top: 1rem; font-size: 0.9rem;">
+            <div style="font-weight: 600; margin-bottom: 0.5rem;">⚠️ Error</div>
+            <div id="errorText"></div>
+        </div>
     </div>
 
     <script>
@@ -148,6 +153,15 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
 
                     console.log('IR Response:', data);
 
+                    // Check for errors from sensor
+                    if (data.error) {
+                        clearInterval(checkIR);
+                        clearInterval(countdownInterval);
+                        stopDetection();
+                        showError('Sensor error: ' + data.error);
+                        return;
+                    }
+
                     if (data.detected) {
                         clearInterval(checkIR);
                         clearInterval(countdownInterval);
@@ -201,6 +215,13 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
             isDetecting = false;
             addBottleButton.disabled = false;
             timerSection.style.display = 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            errorText.textContent = message;
+            errorDiv.style.display = 'block';
         }
     </script>
 </body>
