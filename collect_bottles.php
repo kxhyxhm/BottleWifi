@@ -45,7 +45,7 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                 <span class="emoji">♻️</span>
                 <span class="emoji">🌱</span>
             </div>
-            <h1 class="title">Collecting Bottles</h1>
+            <h1 class="title">Bottle Wifi</h1>
             <p class="subtitle" id="headerSubtitle">Drop bottles to earn WiFi time</p>
         </div>
 
@@ -177,17 +177,7 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                             bottleCountDisplay.classList.remove('pulse-animation');
                         }, 500);
 
-                        // Update text for singular/plural
-                        const headerSubtitle = document.getElementById('headerSubtitle');
-                        const bottlesCollectedText = document.getElementById('bottlesCollectedText');
-                        if (bottleCount === 1) {
-                            headerSubtitle.textContent = 'Bottle was dropped to earn WiFi time';
-                            bottlesCollectedText.textContent = 'Bottle Collected';
-                        } else {
-                            headerSubtitle.textContent = 'Bottles were dropped to earn WiFi time';
-                            bottlesCollectedText.textContent = 'Bottles Collected';
-                        }
-
+                       
                         // Fetch duration and update total time
                         fetch('settings_handler.php')
                             .then(res => res.json())
