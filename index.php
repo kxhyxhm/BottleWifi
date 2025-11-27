@@ -236,9 +236,22 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                 window.location.href = 'admin-login.php';
             });
 
-            // Start button
+            // Check if coming from collect_bottles.php with bottle count
+            const urlParams = new URLSearchParams(window.location.search);
+            const bottles = parseInt(urlParams.get('bottles')) || 0;
+            const tokens = urlParams.get('tokens');
+
+            if (bottles > 0 && tokens) {
+                // Show success message and grant WiFi
+                const tokenArray = tokens.split(',');
+                startSection.style.display = 'none';
+                successMessage.style.display = 'block';
+                startWiFiTimer(tokenArray[0], bottles);
+            }
+
+            // Start button - redirect to collection page
             startButton.addEventListener('click', function () {
-                startBottleDetection();
+                window.location.href = 'collect_bottles.php';
             });
 
             // Add bottle button
