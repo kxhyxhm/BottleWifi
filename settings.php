@@ -17,7 +17,6 @@ require_once __DIR__ . '/settings_handler.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $newSettings = [
         'wifi_time' => intval($_POST['wifi_time']) * ($_POST['time_unit'] === 'hours' ? 3600 : 60),
-        'ssid' => $_POST['ssid'],
         'security_mode' => $_POST['security_mode'],
         'channel' => $_POST['channel'],
         'firewall_enabled' => isset($_POST['firewall'])
@@ -315,14 +314,6 @@ $wifi_time_minutes = floor(($settings['wifi_time'] % 3600) / 60);
                 </div>
 
                 <div class="form-group">
-                    <label>Network Name (SSID)</label>
-                    <input type="text" name="ssid" class="form-input" 
-                        value="<?php echo htmlspecialchars($settings['ssid']); ?>" 
-                        maxlength="32" required>
-                    <div class="form-help">The name of your WiFi network (max 32 characters)</div>
-                </div>
-
-                <div class="form-group">
                     <label>Security Mode</label>
                     <select name="security_mode" class="form-input">
                         <option value="WPA3-Personal" <?php echo $settings['security_mode'] === 'WPA3-Personal' ? 'selected' : ''; ?>>WPA3-Personal (Recommended)</option>
@@ -367,9 +358,6 @@ $wifi_time_minutes = floor(($settings['wifi_time'] % 3600) / 60);
                     echo floor($settings['wifi_time'] / 60) . ' minute(s)';
                 }
                 ?>
-            </div>
-            <div class="info-item">
-                <strong>Network Name:</strong> <?php echo htmlspecialchars($settings['ssid']); ?>
             </div>
             <div class="info-item">
                 <strong>Security:</strong> <?php echo htmlspecialchars($settings['security_mode']); ?>
