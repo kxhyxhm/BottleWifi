@@ -46,12 +46,12 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                 <span class="emoji">🌱</span>
             </div>
             <h1 class="title">Collecting Bottles</h1>
-            <p class="subtitle" id="headerSubtitle">Bottles were dropped to earn WiFi time</p>
+            <p class="subtitle" id="headerSubtitle">Drop bottles to earn WiFi time</p>
         </div>
 
         <div class="bottle-count-display">
             <div class="count-number" id="bottleCount">0</div>
-            <p class="subtitle" id="bottlesCollectedText">Bottles Collected</p>
+            <p class="subtitle" id="bottlesCollectedText">No Bottles Yet</p>
             <p class="total-time" id="totalTime">0 minutes WiFi</p>
         </div>
 
