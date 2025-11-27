@@ -31,6 +31,10 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
 .status-label { font-size: 0.75rem; color: #059669; font-weight: 500; }
 .status-value { color: #059669; }
 .network-info { margin-top: 1rem; font-size: 0.75rem; color: #059669; text-align: center; }
+.admin-link { margin-top: 1.5rem; text-align: center; }
+.admin-button { display: inline-flex; align-items: center; gap: 0.5rem; color: #059669; text-decoration: none; font-size: 0.875rem; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+.admin-button:hover { background: rgba(5,150,105,0.1); }
+.admin-button svg { width: 16px; height: 16px; }
 .dust-container { position: absolute; top:0; left:0; right:0; bottom:0; overflow:hidden; pointer-events:none; }
 .dust { position: absolute; width:3px; height:3px; background: rgba(250,204,21,0.2); border-radius:50%; }
 @keyframes float-up { 0%{transform:translateY(100%) translateX(0) scale(0);opacity:0;} 50%{opacity:0.5;} 100%{transform:translateY(-100%) translateX(var(--tx)) scale(1);opacity:0;} }
@@ -52,10 +56,16 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                 <span class="emoji">🌱</span>
             </div>
             <h1 class="title">Bottle WiFi</h1>
-            <p class="subtitle">Insert a bottle to connect</p>
+            <p class="subtitle">Insert bottles to earn WiFi time</p>
             <div class="info-pill">
                 <span>1 Bottle = 5 minutes</span>
             </div>
+        </div>
+
+        <div id="bottleCountSection" style="display: none; text-align: center; margin-bottom: 2rem;">
+            <div style="font-size: 4rem; font-weight: 700; color: #059669;" id="bottleCount">0</div>
+            <p class="subtitle">Bottles Collected</p>
+            <p style="color: #059669; font-size: 1.1rem; font-weight: 500; margin-top: 0.5rem;" id="totalTime">0 minutes WiFi</p>
         </div>
 
         <div id="timerSection" class="timer-section">
@@ -81,6 +91,17 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                     Admin Settings
                 </a>
             </div>
+        </div>
+
+        <div id="collectingSection" style="display: none;">
+            <button id="addBottleButton" class="start-button" style="margin-bottom: 1rem;">
+                <span>Insert Another Bottle</span>
+                <span class="emoji">♻️</span>
+            </button>
+            <button id="doneButton" class="start-button" style="background: linear-gradient(to right, #059669, #047857);">
+                <span>Done - Get WiFi</span>
+                <span class="emoji">✓</span>
+            </button>
         </div>
 
         <div id="successMessage" class="success-message">
@@ -196,9 +217,17 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
             const timer = document.getElementById('timer');
             const progressBar = document.getElementById('progressBar');
             const successMessage = document.getElementById('successMessage');
+            const bottleCountSection = document.getElementById('bottleCountSection');
+            const collectingSection = document.getElementById('collectingSection');
+            const addBottleButton = document.getElementById('addBottleButton');
+            const doneButton = document.getElementById('doneButton');
+            const bottleCountDisplay = document.getElementById('bottleCount');
+            const totalTimeDisplay = document.getElementById('totalTime');
             
             let timeLeft = 30;
             let countdownInterval;
+            let bottleCount = 0;
+            let verificationTokens = [];
 
             const adminButton = document.querySelector('.admin-button');
             adminButton.addEventListener('click', function(e) {
@@ -209,8 +238,34 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
 
             // Start button
             startButton.addEventListener('click', function () {
+                startBottleDetection();
+            });
+
+            // Add bottle button
+            addBottleButton.addEventListener('click', function () {
+                startBottleDetection();
+            });
+
+            // Done button - grant WiFi with total collected time
+            doneButton.addEventListener('click', function () {
+                if (bottleCount === 0) {
+                    alert('Please insert at least one bottle!');
+                    return;
+                }
+                
+                collectingSection.style.display = 'none';
+                bottleCountSection.style.display = 'none';
+                successMessage.style.display = 'block';
+                
+                // Grant WiFi using the first token (all bottles from same session)
+                startWiFiTimer(verificationTokens[0], bottleCount);
+            });
+
+            function startBottleDetection() {
                 startSection.style.display = 'none';
+                collectingSection.style.display = 'none';
                 timerSection.style.display = 'block';
+                timeLeft = 30;
 
                 // IR CHECK LOOP
                 // The IR sensor's built-in red LED will blink when bottle is near
@@ -234,11 +289,34 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                             clearInterval(checkIR);
                             clearInterval(countdownInterval);
                             
-                            timerSection.style.display = 'none';
-                            successMessage.style.display = 'block';
+                            // Add bottle to count
+                            bottleCount++;
+                            verificationTokens.push(data.verification_token);
                             
-                            // Pass verification token to WiFi grant
-                            startWiFiTimer(data.verification_token);
+                            // Update display
+                            bottleCountDisplay.textContent = bottleCount;
+                            
+                            // Fetch duration from settings
+                            fetch('settings_handler.php')
+                                .then(res => res.json())
+                                .catch(() => ({ wifi_time: 300 })) // Default 5 min
+                                .then(settings => {
+                                    const minutesPerBottle = Math.floor(settings.wifi_time / 60);
+                                    const totalMinutes = bottleCount * minutesPerBottle;
+                                    totalTimeDisplay.textContent = `${totalMinutes} minutes WiFi`;
+                                });
+                            
+                            // Show collection interface
+                            timerSection.style.display = 'none';
+                            bottleCountSection.style.display = 'block';
+                            collectingSection.style.display = 'block';
+                            
+                            // Log this bottle
+                            fetch('log_bottle.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'log_bottle' })
+                            }).catch(err => console.error('Failed to log bottle:', err));
                         }
                     } catch (e) {
                         console.error('Fetch error:', e);
@@ -267,7 +345,7 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                 }, 1000);
             });
 
-            function startWiFiTimer(verificationToken) {
+            function startWiFiTimer(verificationToken, numBottles = 1) {
                 const display = document.getElementById('timeRemaining');
 
                 // Get device MAC address and grant WiFi access with verification token
@@ -280,7 +358,7 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                 }
                 
                 // Fetch duration from settings (remove hardcoded duration parameter)
-                fetch(`hardware_control.php?action=wifi&subaction=grant&token=${verificationToken}`)
+                fetch(`hardware_control.php?action=wifi&subaction=grant&token=${verificationToken}&bottles=${numBottles}`)
                     .then(res => res.json())
                     .then(data => {
                         console.log('WiFi granted:', data);
@@ -296,9 +374,13 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                             }
                         }
                         
-                        // Use duration from response (in minutes)
-                        const durationMinutes = data.duration_minutes || 5;
+                        // Use duration from response (in minutes) multiplied by number of bottles
+                        const durationMinutes = (data.duration_minutes || 5) * numBottles;
                         let timeLeft = durationMinutes * 60;
+                        
+                        // Update success message
+                        successMessage.querySelector('.subtitle').textContent = 
+                            `Thank you for recycling ${numBottles} bottle${numBottles > 1 ? 's' : ''}. Your ${durationMinutes} minutes of WiFi access starts now.`;
                         
                         // Start the countdown timer
                         const wifiTimer = setInterval(function () {
@@ -335,13 +417,9 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                         }, 1000);
                     })
                     .catch(err => console.error('WiFi control error:', err));
-
-                // Log the bottle detection
-                fetch('log_bottle.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'log_bottle' })
-                }).catch(err => console.error('Failed to log bottle:', err));
+            }
+            
+            // Close startBottleDetection function
             }
         });
     </script>
