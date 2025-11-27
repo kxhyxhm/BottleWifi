@@ -177,6 +177,13 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                             bottleCountDisplay.classList.remove('pulse-animation');
                         }, 500);
 
+                        // Update text for singular/plural
+                        const bottlesCollectedText = document.getElementById('bottlesCollectedText');
+                        if (bottleCount === 1) {
+                            bottlesCollectedText.textContent = 'Bottle Collected';
+                        } else {
+                            bottlesCollectedText.textContent = 'Bottles Collected';
+                        }
                        
                         // Fetch duration and update total time
                         fetch('settings_handler.php')
