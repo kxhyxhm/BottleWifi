@@ -67,10 +67,9 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
             ✓ Bottle detected!
         </div>
 
-        <button id="addBottleButton" class="button">
-            <span>Insert Bottle</span>
-            <span class="emoji">♻️</span>
-        </button>
+        <div id="waitingMessage" class="status-message" style="display: block; background: #e0f2fe; border-color: #7dd3fc; color: #0369a1;">
+            🔍 Waiting for bottles...
+        </div>
 
         <button id="doneButton" class="button button-done" disabled>
             <span>Done - Get WiFi</span>
@@ -92,18 +91,15 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
 
         const bottleCountDisplay = document.getElementById('bottleCount');
         const totalTimeDisplay = document.getElementById('totalTime');
-        const addBottleButton = document.getElementById('addBottleButton');
         const doneButton = document.getElementById('doneButton');
         const timerSection = document.getElementById('timerSection');
         const timer = document.getElementById('timer');
         const progressBar = document.getElementById('progressBar');
         const statusMessage = document.getElementById('statusMessage');
+        const waitingMessage = document.getElementById('waitingMessage');
 
-        addBottleButton.addEventListener('click', function() {
-            if (!isDetecting) {
-                startBottleDetection();
-            }
-        });
+        // Start automatic detection on page load
+        startBottleDetection();
 
         doneButton.addEventListener('click', function() {
             if (bottleCount === 0) {
@@ -123,27 +119,8 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
             if (isDetecting) return;
             
             isDetecting = true;
-            addBottleButton.disabled = true;
-            timerSection.style.display = 'block';
             statusMessage.style.display = 'none';
-            
-            let timeLeft = 30;
-            timer.textContent = timeLeft;
-            progressBar.style.width = '100%';
-
-            // Start countdown
-            countdownInterval = setInterval(function() {
-                timeLeft--;
-                timer.textContent = timeLeft;
-                progressBar.style.width = (timeLeft / 30 * 100) + '%';
-
-                if (timeLeft <= 0) {
-                    clearInterval(countdownInterval);
-                    clearInterval(checkIR);
-                    stopDetection();
-                    alert('Timeout - no bottle detected. Try again!');
-                }
-            }, 1000);
+            waitingMessage.style.display = 'block';
 
             // Check for bottle every 500ms
             checkIR = setInterval(async function() {
@@ -163,9 +140,6 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                     }
 
                     if (data.detected) {
-                        clearInterval(checkIR);
-                        clearInterval(countdownInterval);
-
                         // Bottle detected!
                         bottleCount++;
                         verificationTokens.push(data.verification_token);
@@ -195,10 +169,12 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                                 totalTimeDisplay.textContent = `${totalMinutes} minutes WiFi`;
                             });
 
-                        // Show success message
+                        // Show success message briefly
+                        waitingMessage.style.display = 'none';
                         statusMessage.style.display = 'block';
                         setTimeout(() => {
                             statusMessage.style.display = 'none';
+                            waitingMessage.style.display = 'block';
                         }, 2000);
 
                         // Log bottle
@@ -208,10 +184,15 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                             body: JSON.stringify({ action: 'log_bottle' })
                         }).catch(err => console.error('Log error:', err));
 
-                        stopDetection();
-
                         // Enable done button
                         doneButton.disabled = false;
+
+                        // Wait 2 seconds then continue detecting for next bottle
+                        clearInterval(checkIR);
+                        setTimeout(() => {
+                            stopDetection();
+                            startBottleDetection();
+                        }, 2000);
                     }
                 } catch (e) {
                     console.error('Fetch error:', e);
@@ -221,8 +202,6 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
 
         function stopDetection() {
             isDetecting = false;
-            addBottleButton.disabled = false;
-            timerSection.style.display = 'none';
         }
 
         function showError(message) {
