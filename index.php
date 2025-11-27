@@ -106,7 +106,7 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
 
         <div id="successMessage" class="success-message">
             <div class="title">Connected! 🌿</div>
-            <p class="subtitle">Thank you for recycling. Your 5 minutes of WiFi access starts now.</p>
+            <p class="subtitle" id="wifiGrantedSubtitle">Thank you for recycling. Your 5 minutes of WiFi access starts now.</p>
             
             <div class="status-grid">
                 <div class="status-card">
@@ -246,6 +246,15 @@ body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align
                 const tokenArray = tokens.split(',');
                 startSection.style.display = 'none';
                 successMessage.style.display = 'block';
+                
+                // Update subtitle text based on bottle count
+                const subtitleElement = document.getElementById('wifiGrantedSubtitle');
+                if (bottles === 1) {
+                    subtitleElement.textContent = 'Bottle was dropped to earn WiFi time';
+                } else {
+                    subtitleElement.textContent = 'Bottles were dropped to earn WiFi time';
+                }
+                
                 startWiFiTimer(tokenArray[0], bottles);
             }
 
